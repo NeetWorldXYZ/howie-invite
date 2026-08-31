@@ -8,11 +8,13 @@ export default function Hud() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
 
+  const inTrials = state.phase === 'trials';
+
   return (
     <>
-      <div className="hud">
+      <div className={'hud' + (inTrials ? '' : ' bare')}>
         <div className="hud-progress">
-          INITIATION<br /><b>{state.trial} / {TRIALS.length}</b>
+          {inTrials && <>INITIATION<br /><b>{state.trial} / {TRIALS.length}</b></>}
         </div>
         <div className="hud-actions">
           <button
@@ -29,12 +31,12 @@ export default function Hud() {
         <div className="hud-menu" onClick={() => setMenuOpen(false)}>
           {!confirmReset ? (
             <button className="danger" onClick={(e) => { e.stopPropagation(); setConfirmReset(true); }}>
-              Start over
+              Start over from the envelope
             </button>
           ) : (
             <>
               <button className="danger" onClick={() => { reset(); setConfirmReset(false); }}>
-                Yes, start over
+                Yes, wipe my progress
               </button>
               <button onClick={(e) => { e.stopPropagation(); setConfirmReset(false); setMenuOpen(false); }}>
                 No

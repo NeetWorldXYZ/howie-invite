@@ -39,6 +39,17 @@ export default function Envelope() {
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
+  // A reset can happen while this component is already mounted (from the
+  // invitation screen), so follow the phase back to the start.
+  useEffect(() => {
+    if (state.phase === 'envelope' && stage !== 'idle') {
+      timers.current.forEach(clearTimeout);
+      timers.current = [];
+      setPull(0);
+      setStage('idle');
+    }
+  }, [state.phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const runReveal = () => {
     const at = (fn, ms) => timers.current.push(setTimeout(fn, ms));
     setStage('break');

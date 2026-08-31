@@ -24,9 +24,12 @@ export default function App() {
     screen = <View key={state.trial} />;
   }
 
+  // The HUD carries the only reset control, so it must be reachable from
+  // every phase — including the finale, which you could otherwise never
+  // leave without clearing site data by hand.
   return (
     <div className="app">
-      {state.phase === 'trials' && <Hud />}
+      <Hud />
       {screen}
       {DEV_MODE && <DevPanel />}
     </div>

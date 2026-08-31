@@ -10,7 +10,7 @@ const PIECES = 90;
 const CONFETTI_COLORS = ['#c9a227', '#edd282', '#c0281c', '#f4e3a1', '#ffffff', '#e8bd3a'];
 
 export default function Finale() {
-  const { state } = useGame();
+  const { state, reset } = useGame();
   const submitted = useRef(false);
 
   useEffect(() => { sfx.fanfare(); }, []);
@@ -63,6 +63,10 @@ export default function Finale() {
           <div className="muted small" style={{ marginTop: 12, whiteSpace: 'pre-line' }}>{FINALE.noUrl}</div>
         </div>
       )}
+
+      <button className="run-again" onClick={() => { sfx.tap(); reset(); }}>
+        RUN IT AGAIN
+      </button>
     </div>
   );
 }

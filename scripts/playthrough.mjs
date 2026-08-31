@@ -283,6 +283,21 @@ try {
   await page.getByText('WELCOME TO THE LEAGUE').waitFor();
   ok('finale survives refresh');
 
+  // The finale must not be a dead end — you have to be able to play again.
+  await page.getByRole('button', { name: 'RUN IT AGAIN', exact: true }).click();
+  await page.getByText('You have been chosen.').waitFor({ timeout: 8000 });
+  await page.locator('.wax-seal').waitFor({ timeout: 4000 });
+  ok('RUN IT AGAIN on the finale restarts from the sealed envelope');
+  await page.reload();
+  await page.getByText('You have been chosen.').waitFor({ timeout: 8000 });
+  ok('the restart persists through a refresh (save really was cleared)');
+
+  // and the same is reachable from the HUD menu at any point
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('button', { name: /Start over/ }).waitFor();
+  ok('HUD reset is reachable outside the trials too');
+  await page.keyboard.press('Escape').catch(() => {});
+
   const p2 = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
   await p2.goto(BASE);
   const fresh = await p2.getByText('You have been chosen.').isVisible().catch(() => false);
