@@ -21,6 +21,14 @@ try {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 
+  // count scheduled audio sources so we can prove sound actually fires
+  await page.addInitScript(() => {
+    window.__started = 0;
+    const orig = AudioScheduledSourceNode.prototype.start;
+    AudioScheduledSourceNode.prototype.start = function (...a) { window.__started++; return orig.apply(this, a); };
+  });
+  await page.reload();
+
   // ---------- THE REVEAL ----------
   await page.getByText('You have been chosen.').waitFor();
   await page.getByText('ONE OF TEN').waitFor();
@@ -46,6 +54,20 @@ try {
   // the shards fade as they fall, so assert on attachment rather than visibility
   await page.locator('.wax-seal.broken').waitFor({ state: 'attached', timeout: 4000 });
   ok('pulling the wax seal breaks it');
+
+  // sound must come on by itself — no tap-to-enable, no mute toggle
+  await page.waitForTimeout(400);
+  const audio = await page.evaluate(() => {
+    const el = document.querySelector('audio');
+    return {
+      started: window.__started || 0,
+      media: !!el && !el.paused && document.body.contains(el),
+    };
+  });
+  if (!audio.started) throw new Error('no audio sources were scheduled on the first gesture');
+  ok(`sound unlocks on the first gesture (${audio.started} sources scheduled)`);
+  if (!audio.media) throw new Error('silent media element not playing — iOS ringer switch would mute everything');
+  ok('silent media element is playing, so iOS does not gate audio on the ringer switch');
 
   // choreography: flap opens, card rises, card comes forward
   await page.locator('.reveal-scene.stage-open').waitFor({ timeout: 4000 });
@@ -136,21 +158,37 @@ try {
   await page.getByText('BALLOON POP').first().waitFor();
   const wall = await box('.balloon-wall');
   let found = false;
+  let dartPath = [];
   for (let attempt = 0; attempt < 40 && !found; attempt++) {
     const targets = await page.locator('.balloon:not(.popped)').all();
     if (!targets.length) break;
     const t = await targets[0].boundingBox();
-    // flick from the dart toward the balloon
-    const sx = wall.x + wall.width / 2, sy = wall.y + wall.height + 30;
-    await page.mouse.move(sx, sy);
+    const ready = await box('.dart-ready');
+    await page.mouse.move(ready.x + ready.width / 2, ready.y + ready.height / 2);
     await page.mouse.down();
     await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2, { steps: 6 });
     await page.mouse.up();
+    if (attempt === 0) {
+      // sample the very first throw to prove it animates rather than jumps
+      for (let i = 0; i < 9; i++) {
+        const pos = await page.evaluate(() => {
+          const d = document.querySelector('.dart-flying');
+          if (!d) return null;
+          const r = d.getBoundingClientRect();
+          return Math.round(r.left) + ',' + Math.round(r.top);
+        });
+        if (pos) dartPath.push(pos);
+        await page.waitForTimeout(38);
+      }
+      dartPath = [...new Set(dartPath)];
+    }
     await page.waitForTimeout(500);
     found = await page.locator('.prize-paper').isVisible().catch(() => false);
   }
   if (!found) throw new Error('never found the balloon with the paper');
   ok('trial 3: flicking darts pops balloons until the paper is found');
+  if (dartPath.length < 4) throw new Error(`dart teleported — only ${dartPath.length} positions sampled`);
+  ok(`trial 3: the dart flies (sampled ${dartPath.length} positions in flight)`);
   await page.locator('.balloon-wall.receded').waitFor();
   ok('trial 3: balloons recede into the background');
   await page.locator('.prize-paper').click();

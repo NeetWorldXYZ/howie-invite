@@ -799,13 +799,21 @@ input, textarea, select { font-family: inherit; }
   to { transform: rotate(var(--a)) translateX(42px) scale(0.4); opacity: 0; }
 }
 
-.dart-stuck, .dart-flying { position: absolute; z-index: 6; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.6)); }
-.dart-flying { transition: left 0.28s cubic-bezier(0.25,0.7,0.4,1), top 0.28s cubic-bezier(0.25,0.7,0.4,1); }
+.dart-stuck { position: absolute; z-index: 6; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.6)); }
+/* driven frame by frame, so no transition here */
+.dart-flying {
+  position: absolute; z-index: 12;
+  filter: drop-shadow(0 5px 9px rgba(0,0,0,0.7));
+  will-change: transform, left, top;
+  pointer-events: none;
+}
 .dart-ready {
-  position: absolute; left: 50%; bottom: 2px;
+  position: absolute; left: 50%; bottom: 2px; z-index: 11;
   transform: translateX(-50%);
   animation: dartBob 1.8s ease-in-out infinite;
   filter: drop-shadow(0 4px 7px rgba(0,0,0,0.65));
+  transition: opacity 0.12s ease;
+  pointer-events: none;
 }
 @keyframes dartBob { 50% { transform: translateX(-50%) translateY(-6px); } }
 

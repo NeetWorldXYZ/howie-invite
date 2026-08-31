@@ -1,11 +1,23 @@
 // ============================================================
 // SOUND — small WebAudio synth. No audio assets needed.
 // Everything routes through a master gain so mute is instant.
+//
+// iOS is the whole reason this file has an unlock dance:
+//   1. an AudioContext starts suspended until resumed inside a real
+//      user gesture, and
+//   2. Safari gates WebAudio behind the hardware ringer switch unless
+//      a media element is playing, so we keep a silent looping <audio>
+//      running to put the page in media-playback mode.
+// Both are handled by unlockAudio(), called on the first touch.
 // ============================================================
+
+const SILENT_WAV = 'data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
 
 let ctx = null;
 let master = null;
 let muted = false;
+let unlocked = false;
+let silentEl = null;
 
 function ensure() {
   if (!ctx) {
@@ -20,9 +32,49 @@ function ensure() {
   return ctx;
 }
 
+// Call from the first user gesture. Safe to call repeatedly.
+export function unlockAudio() {
+  if (unlocked) return;
+  unlocked = true;
+
+  try {
+    silentEl = document.createElement('audio');
+    silentEl.src = SILENT_WAV;
+    silentEl.loop = true;
+    silentEl.volume = 0.02;
+    silentEl.setAttribute('playsinline', '');
+    silentEl.setAttribute('webkit-playsinline', '');
+    silentEl.style.cssText = 'position:fixed;width:0;height:0;opacity:0;pointer-events:none';
+    document.body.appendChild(silentEl);
+    const play = silentEl.play();
+    if (play && play.catch) play.catch(() => {});
+  } catch { /* no media element available */ }
+
+  const c = ensure();
+  if (!c) return;
+  c.resume().catch(() => {});
+  // Prime with a one-sample source: the very first scheduled sound after
+  // a resume is otherwise often swallowed.
+  try {
+    const buf = c.createBuffer(1, 1, c.sampleRate);
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    src.connect(c.destination);
+    src.start(0);
+  } catch { /* ignore */ }
+}
+
+// iOS suspends the context when the tab is backgrounded.
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+  });
+}
+
 export function setMuted(m) {
   muted = m;
   if (master) master.gain.value = m ? 0 : 0.5;
+  if (silentEl) { try { m ? silentEl.pause() : silentEl.play().catch(() => {}); } catch { /* ignore */ } }
 }
 
 function tone({ freq = 440, dur = 0.1, type = 'sine', vol = 0.3, at = 0, slide = 0 }) {

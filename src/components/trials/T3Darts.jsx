@@ -26,7 +26,9 @@ function makeBalloons(n) {
 
 export default function T3Darts() {
   const { advance, stat } = useGame();
+  const sceneRef = useRef(null);
   const wallRef = useRef(null);
+  const readyRef = useRef(null);
   const aim = useRef(null);
   const thrown = useRef(0);
 
@@ -51,48 +53,88 @@ export default function T3Darts() {
     return () => clearInterval(id);
   }, [phase]);
 
+  // The dart used to mount already at its target, so it teleported.
+  // Fly it frame by frame instead: an arc, a little depth, nose forward.
+  const flightRaf = useRef(0);
+  useEffect(() => () => cancelAnimationFrame(flightRaf.current), []);
+
   const throwDart = (vx, vy) => {
+    const scene = sceneRef.current.getBoundingClientRect();
     const wall = wallRef.current.getBoundingClientRect();
+    const ready = readyRef.current.getBoundingClientRect();
+
+    // where the dart leaves from, in scene pixels
+    const from = {
+      x: ready.left - scene.left + ready.width / 2,
+      y: ready.top - scene.top + ready.height / 2,
+    };
+
+    // pick the first un-popped balloon along the flick direction
     const len = Math.hypot(vx, vy) || 1;
     const dx = vx / len, dy = vy / len;
-    const originX = 50, originY = 112;
     let hit = null, hitT = Infinity;
     for (const b of balloons) {
       if (b.popped) continue;
-      const bx = b.x + 6.5, by = b.y + 9;
-      const px = bx - originX, py = (by - originY) * (wall.height / wall.width);
+      const bx = wall.left - scene.left + ((b.x + 6.5) / 100) * wall.width;
+      const by = wall.top - scene.top + ((b.y + 9) / 100) * wall.height;
+      const px = bx - from.x, py = by - from.y;
       const t = px * dx + py * dy;
       if (t <= 0) continue;
       const perp = Math.abs(px * dy - py * dx);
-      if (perp < 8 && t < hitT) { hitT = t; hit = b; }
+      if (perp < 46 && t < hitT) { hitT = t; hit = { b, x: bx, y: by }; }
     }
 
-    const target = hit ? { x: hit.x + 6.5, y: hit.y + 9 } : { x: originX + dx * 95, y: originY + dy * 95 };
-    setFlying({ ...target, rot: Math.atan2(dy, dx) * (180 / Math.PI) + 90 });
-    sfx.dartThrow();
+    const to = hit
+      ? { x: hit.x, y: hit.y }
+      : { x: from.x + dx * 460, y: from.y + dy * 460 };
 
-    setTimeout(() => {
-      setFlying(null);
-      thrown.current += 1;
-      stat('darts', thrown.current);
-      if (hit) {
-        sfx.balloonPop(hit.pitch);
-        setBalloons((bs) => bs.map((b) => (b.id === hit.id ? { ...b, popped: true } : b)));
-        setShreds((s) => [...s, { id: hit.id, x: hit.x + 6.5, y: hit.y + 9, color: hit.color }]);
-        setTimeout(() => setShreds((s) => s.filter((x) => x.id !== hit.id)), 700);
-        if (hit.id === prizeId) {
-          setMsg(DARTS.noteFound);
-          sfx.prizeBell();
-          setTimeout(() => { sfx.flutter(); setPhase('paper'); }, 750);
-        } else {
-          setMsg(DARTS.popText[thrown.current % DARTS.popText.length]);
-        }
+    sfx.dartThrow();
+    const DUR = 400;
+    const t0 = performance.now();
+    const arc = Math.min(46, Math.hypot(to.x - from.x, to.y - from.y) * 0.16);
+    let prev = { ...from };
+
+    const step = (now) => {
+      const raw = Math.min(1, (now - t0) / DUR);
+      const t = 1 - Math.pow(1 - raw, 2); // ease out — fast off the hand
+      const x = from.x + (to.x - from.x) * t;
+      const y = from.y + (to.y - from.y) * t - Math.sin(Math.PI * t) * arc;
+      const ang = Math.atan2(y - prev.y, x - prev.x) * (180 / Math.PI) + 90;
+      prev = { x, y };
+      setFlying({ x, y, rot: ang, scale: 1 - t * 0.3 });
+      if (raw < 1) { flightRaf.current = requestAnimationFrame(step); return; }
+      land(hit, to, ang);
+    };
+    flightRaf.current = requestAnimationFrame(step);
+  };
+
+  const land = (hit, to, rot) => {
+    setFlying(null);
+    thrown.current += 1;
+    stat('darts', thrown.current);
+    if (hit) {
+      sfx.balloonPop(hit.b.pitch);
+      setBalloons((bs) => bs.map((b) => (b.id === hit.b.id ? { ...b, popped: true } : b)));
+      setShreds((s) => [...s, { id: hit.b.id, x: hit.b.x + 6.5, y: hit.b.y + 9, color: hit.b.color }]);
+      setTimeout(() => setShreds((s) => s.filter((x) => x.id !== hit.b.id)), 700);
+      if (hit.b.id === prizeId) {
+        setMsg(DARTS.noteFound);
+        sfx.prizeBell();
+        setTimeout(() => { sfx.flutter(); setPhase('paper'); }, 750);
       } else {
-        sfx.boardThunk();
-        setStuck((s) => [...s, { ...target, rot: Math.atan2(dy, dx) * (180 / Math.PI) + 90 }]);
-        setMsg(DARTS.missText[thrown.current % DARTS.missText.length]);
+        setMsg(DARTS.popText[thrown.current % DARTS.popText.length]);
       }
-    }, 300);
+    } else {
+      sfx.boardThunk();
+      const wall = wallRef.current.getBoundingClientRect();
+      const scene = sceneRef.current.getBoundingClientRect();
+      setStuck((s) => [...s, {
+        x: ((to.x - (wall.left - scene.left)) / wall.width) * 100,
+        y: ((to.y - (wall.top - scene.top)) / wall.height) * 100,
+        rot,
+      }]);
+      setMsg(DARTS.missText[thrown.current % DARTS.missText.length]);
+    }
   };
 
   const down = (e) => {
@@ -136,7 +178,7 @@ export default function T3Darts() {
         <h2 className="trial-title">{phase === 'paper' ? DARTS.paperHint : DARTS.sub}</h2>
       </header>
 
-      <div className="dart-scene" onPointerDown={down} onPointerUp={up} onPointerCancel={() => { aim.current = null; }}>
+      <div className="dart-scene" ref={sceneRef} onPointerDown={down} onPointerUp={up} onPointerCancel={() => { aim.current = null; }}>
         <div className="booth">
           <div className="booth-awning">
             <span className="booth-banner">{DARTS.banner}</span>
@@ -173,11 +215,6 @@ export default function T3Darts() {
                 <Dart length={38} />
               </span>
             ))}
-            {flying && (
-              <span className="dart-flying" style={{ left: `${flying.x}%`, top: `${flying.y}%`, transform: `translate(-50%,-88%) rotate(${flying.rot}deg)` }}>
-                <Dart length={38} />
-              </span>
-            )}
           </div>
 
           <div className="booth-rail" />
@@ -193,9 +230,21 @@ export default function T3Darts() {
           </button>
         )}
 
-        {phase === 'throw' && (
-          <div className="dart-ready"><Dart length={46} /></div>
+        {flying && (
+          <span
+            className="dart-flying"
+            style={{
+              left: flying.x, top: flying.y,
+              transform: `translate(-50%,-72%) rotate(${flying.rot}deg) scale(${flying.scale})`,
+            }}
+          >
+            <Dart length={46} />
+          </span>
         )}
+
+        <div className="dart-ready" ref={readyRef} style={{ opacity: phase === 'throw' && !flying ? 1 : 0 }}>
+          <Dart length={46} />
+        </div>
       </div>
 
       <div className="slot-msg">{phase === 'paper' ? '' : msg || DARTS.hint}</div>

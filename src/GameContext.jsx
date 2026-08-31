@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useReducer, useRef } from 'react';
 import { storage } from './persistence.js';
-import { setMuted } from './sound.js';
+import { setMuted, unlockAudio } from './sound.js';
 
 // phase: 'envelope' -> 'invitation' -> 'trials' (1..5) -> 'finale'
 const initialState = {
@@ -62,6 +62,15 @@ export function GameProvider({ children }) {
   }, [state]);
 
   useEffect(() => { setMuted(!!state.muted); }, [state.muted]);
+
+  // Sound is on by default, but iOS will not make a sound until an
+  // AudioContext is resumed inside a real gesture. Do it on first touch.
+  useEffect(() => {
+    const go = () => unlockAudio();
+    const events = ['pointerdown', 'touchstart', 'click', 'keydown'];
+    events.forEach((t) => window.addEventListener(t, go, { passive: true }));
+    return () => events.forEach((t) => window.removeEventListener(t, go));
+  }, []);
 
   const api = {
     state,
