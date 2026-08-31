@@ -21,7 +21,7 @@ export default function DevPanel() {
         {TRIALS.map((t, i) => (
           <button key={t.id} onClick={() => dispatch({ type: 'GOTO', trial: i + 1 })}>{i + 1} {t.label}</button>
         ))}
-        <button onClick={() => dispatch({ type: 'GOTO', trial: 7 })}>finale</button>
+        <button onClick={() => dispatch({ type: 'GOTO', trial: 6 })}>finale</button>
       </div>
       <div className="dev-row">
         <button onClick={advance}>skip current</button>

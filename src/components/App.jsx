@@ -5,14 +5,13 @@ import Hud from './Hud.jsx';
 import Envelope from './Envelope.jsx';
 import Finale from './Finale.jsx';
 import DevPanel from './DevPanel.jsx';
-import T1Scratch from './trials/T1Scratch.jsx';
-import T2Inflate from './trials/T2Inflate.jsx';
-import T3Chug from './trials/T3Chug.jsx';
-import T4Wheel from './trials/T4Wheel.jsx';
-import T5Sign from './trials/T5Sign.jsx';
-import T6Seal from './trials/T6Seal.jsx';
+import T1Slot from './trials/T1Slot.jsx';
+import T2Pizza from './trials/T2Pizza.jsx';
+import T3Darts from './trials/T3Darts.jsx';
+import T4Maze from './trials/T4Maze.jsx';
+import T5Door from './trials/T5Door.jsx';
 
-const TRIAL_VIEWS = { 1: T1Scratch, 2: T2Inflate, 3: T3Chug, 4: T4Wheel, 5: T5Sign, 6: T6Seal };
+const TRIAL_VIEWS = { 1: T1Slot, 2: T2Pizza, 3: T3Darts, 4: T4Maze, 5: T5Door };
 
 export default function App() {
   const { state } = useGame();
@@ -21,15 +20,12 @@ export default function App() {
   if (state.phase === 'envelope' || state.phase === 'invitation') screen = <Envelope />;
   else if (state.phase === 'finale') screen = <Finale />;
   else {
-    const View = TRIAL_VIEWS[state.trial] || T1Scratch;
+    const View = TRIAL_VIEWS[state.trial] || T1Slot;
     screen = <View key={state.trial} />;
   }
 
-  // The chug trial leaves the whole app slightly crooked. It never recovers.
-  const tilt = state.phase === 'trials' ? state.drunk : 0;
-
   return (
-    <div className={'app' + (tilt ? ` drunk-${Math.min(2, tilt)}` : '')}>
+    <div className="app">
       {state.phase === 'trials' && <Hud />}
       {screen}
       {DEV_MODE && <DevPanel />}

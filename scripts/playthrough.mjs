@@ -1,4 +1,4 @@
-// End-to-end run of the initiation using REAL gestures against the built app.
+// End-to-end run using REAL gestures against the built app.
 // Requires: npm run build && npx vite preview --port 4173
 import { chromium } from 'playwright';
 
@@ -14,154 +14,195 @@ page.setDefaultTimeout(15000);
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 const btn = (n) => page.getByRole('button', { name: n, exact: true });
-const box = async (sel) => (await page.locator(sel).boundingBox());
+const box = (sel) => page.locator(sel).boundingBox();
 
-const t0 = Date.now();
 try {
   await page.goto(BASE);
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 
-  // ---------- OPENING: drag to tear ----------
-  await page.getByText('You are the lucky one.').waitFor();
+  // ---------- ENVELOPE -> GOLDEN TICKET ----------
+  await page.getByText('You have been chosen.').waitFor();
+  if (await page.locator('.envelope .hh-logo').count() !== 1) throw new Error('logo missing from envelope');
+  ok('envelope shows the embossed Howie\'s logo');
   const env = await box('.envelope');
   await page.mouse.move(env.x + 14, env.y + env.height / 2);
   await page.mouse.down();
   for (let i = 1; i <= 24; i++) {
     await page.mouse.move(env.x + 14 + (env.width * 0.78 * i) / 24, env.y + env.height / 2);
-    await page.waitForTimeout(12);
+    await page.waitForTimeout(10);
   }
   await page.mouse.up();
-  await page.getByText('Official Invitation').waitFor({ timeout: 8000 });
-  ok('opening: dragging tears the envelope open');
+  await page.locator('.gticket').waitFor({ timeout: 8000 });
+  if (await page.locator('.gticket .hh-logo').count() !== 1) throw new Error('logo missing from ticket');
+  await page.getByText('ADMIT ONE').waitFor();
+  ok('tearing it open reveals the golden ticket with the logo');
   await btn('BEGIN INITIATION').click();
-  await page.getByText('INITIATION').first().waitFor();
-  ok('invitation -> trials');
 
-  // ---------- TRIAL 1: scratch ----------
-  const cv = await box('.scratch-canvas');
-  for (let row = 0; row < 7; row++) {
-    const y = cv.y + 12 + (cv.height - 24) * (row / 6);
-    await page.mouse.move(cv.x + 6, y);
+  // ---------- TRIAL 1: SLOT ----------
+  await page.getByText('THE MACHINE').waitFor();
+  const pullLever = async () => {
+    const l = await box('.lever');
+    await page.mouse.move(l.x + l.width / 2, l.y + 10);
     await page.mouse.down();
-    for (let i = 1; i <= 12; i++) {
-      await page.mouse.move(cv.x + 6 + ((cv.width - 12) * i) / 12, y);
-    }
+    for (let i = 1; i <= 10; i++) await page.mouse.move(l.x + l.width / 2, l.y + 10 + i * 9);
     await page.mouse.up();
-  }
-  await page.getByText('THREE MATCHING. YOU WIN.').waitFor({ timeout: 8000 });
-  ok('trial 1: scratching the foil reveals the win');
-  await btn('CONTINUE').click();
-
-  // ---------- TRIAL 2: press and hold to pop ----------
-  await page.getByText("THE COMMISSIONER'S EGO").waitFor();
-  const stage = await box('.inflate-stage');
-  await page.mouse.move(stage.x + stage.width / 2, stage.y + stage.height / 2);
-  await page.mouse.down();
-  await page.getByText('EGO RUPTURED').waitFor({ timeout: 15000 });
-  await page.mouse.up();
-  ok('trial 2: holding inflates until it pops');
-  await btn('PICK UP THE SLIP').click();
-
-  // ---------- TRIAL 3: mash to chug ----------
-  await page.getByText('DRAFT NIGHT').first().waitFor();
-  const glass = await box('.chug-stage');
-  for (let i = 0; i < 160; i++) {
-    await page.mouse.click(glass.x + glass.width / 2, glass.y + glass.height / 2, { delay: 3 });
-    if (i % 6 === 0 && await page.getByText('Two down.').isVisible().catch(() => false)) break;
-    // the between-beers beat ignores taps; wait it out rather than wasting them
-    if (await page.getByText('ANOTHER.').isVisible().catch(() => false)) await page.waitForTimeout(1800);
-    await page.waitForTimeout(12);
-  }
-  await page.getByText('Two down.').waitFor({ timeout: 10000 });
-  ok('trial 3: mashing drinks both beers');
-  const tilted = await page.locator('.app.drunk-2').count();
-  if (tilted !== 1) throw new Error('drunk tilt not applied after chugging');
-  ok('trial 3: the app is now visibly crooked');
-  await btn('STAND UP SLOWLY').click();
-
-  // ---------- TRIAL 4: flick the wheel, twice ----------
-  await page.getByText('LAST PLACE PUNISHMENT').waitFor();
-  const flick = async () => {
-    const w = await box('.wheel');
-    const cx = w.x + w.width / 2, cy = w.y + w.height / 2;
-    await page.mouse.move(cx, cy - w.height * 0.34);
-    await page.mouse.down();
-    for (let i = 1; i <= 8; i++) {
-      const a = -Math.PI / 2 + (i / 8) * 1.5;
-      await page.mouse.move(cx + Math.cos(a) * w.width * 0.34, cy + Math.sin(a) * w.height * 0.34);
-    }
-    await page.mouse.up();
+    await page.waitForTimeout(2200);
   };
-  await flick();
-  await page.getByText('Spin recorded.').waitFor({ timeout: 15000 });
-  ok('trial 4: flicking spins the wheel to a result');
-  await btn('SPIN AGAIN (NOT OPTIONAL)').click();
-  await page.locator('.verdict.locked').waitFor({ timeout: 20000 });
-  ok('trial 4: the forced re-spin locks in a punishment');
-  await btn('ACCEPT MY FATE').click();
+  await pullLever();
+  if (await page.locator('.reel-final svg[aria-label="jackpot"]').count() > 0) throw new Error('jackpot hit on min bet');
+  ok('trial 1: min bet loses');
+  await pullLever();
+  await btn('MAX BET').click();
+  await pullLever();
+  const fingers = await page.locator('.reel-final svg[aria-label="jackpot"]').count();
+  if (fingers !== 3) throw new Error(`expected 3 middle fingers on max bet, got ${fingers}`);
+  ok('trial 1: MAX BET lands three middle fingers = jackpot');
+  await page.getByText('MAKE ONE PIZZA').waitFor({ timeout: 12000 });
+  ok('trial 1: jackpot holds ~3s then advances');
 
-  // ---------- TRIAL 5: draw a signature ----------
-  await page.getByText('LEAGUE COVENANT').waitFor();
-  if (await btn('EXECUTE AGREEMENT').isVisible().catch(() => false)) throw new Error('could execute without signing');
-  ok('trial 5: cannot execute before signing');
-  const pad = await box('.sign-pad');
-  await page.mouse.move(pad.x + 20, pad.y + pad.height / 2);
+  // ---------- TRIAL 2: PIZZA ----------
+  // out-of-order guard
+  await page.getByRole('button', { name: 'PEPPERONI' }).click();
+  await page.getByText('Sauce first.').waitFor();
+  ok('trial 2: refuses pepperoni before sauce');
+  const smear = async () => {
+    const pz = await box('.pizza-round');
+    const cx = pz.x + pz.width / 2, cy = pz.y + pz.height / 2, R = pz.width / 2;
+    for (let ring = 0.16; ring <= 0.82; ring += 0.13) {
+      const r = R * ring;
+      await page.mouse.move(cx + r, cy);
+      await page.mouse.down();
+      for (let a = 0; a <= 360; a += 16) {
+        const rad = (a * Math.PI) / 180;
+        await page.mouse.move(cx + Math.cos(rad) * r, cy + Math.sin(rad) * r);
+      }
+      await page.mouse.up();
+    }
+  };
+  await smear();
+  await btn('NEXT').click();
+  ok('trial 2: sauce spread accepted');
+  await smear();
+  await btn('NEXT').click();
+  ok('trial 2: cheese accepted');
+  const pz = await box('.pizza-round');
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    const r = pz.width / 2 * (i % 2 ? 0.28 : 0.6);
+    await page.mouse.click(pz.x + pz.width / 2 + Math.cos(a) * r, pz.y + pz.height / 2 + Math.sin(a) * r);
+  }
+  if (await page.locator('.pz-pep').count() < 14) throw new Error('pepperoni not placed');
+  await btn('DONE').click();
+  await btn('SEND IT').click();
+  ok('trial 2: pepperoni placed, pizza sent');
+
+  // ---------- TRIAL 3: DARTS ----------
+  await page.getByText('THE BALLOON WALL').waitFor();
+  const wall = await box('.balloon-wall');
+  let found = false;
+  for (let attempt = 0; attempt < 40 && !found; attempt++) {
+    const targets = await page.locator('.balloon:not(.popped)').all();
+    if (!targets.length) break;
+    const t = await targets[0].boundingBox();
+    // flick from the dart toward the balloon
+    const sx = wall.x + wall.width / 2, sy = wall.y + wall.height + 30;
+    await page.mouse.move(sx, sy);
+    await page.mouse.down();
+    await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2, { steps: 6 });
+    await page.mouse.up();
+    await page.waitForTimeout(500);
+    found = await page.locator('.prize-paper').isVisible().catch(() => false);
+  }
+  if (!found) throw new Error('never found the balloon with the paper');
+  ok('trial 3: flicking darts pops balloons until the paper is found');
+  await page.locator('.balloon-wall.receded').waitFor();
+  ok('trial 3: balloons recede into the background');
+  await page.locator('.prize-paper').click();
+  await page.getByText("HOWIE'S BOOK OF RECORDS").waitFor();
+  await page.getByText('KORY & JASON').waitFor();
+  await page.locator('.rn-title', { hasText: 'DOUGH CHAMPS' }).waitFor();
+  ok('trial 3: the note names the dough champs');
+  await btn('ALL HAIL THE DOUGH CHAMPS').click();
+
+  // ---------- TRIAL 4: MAZE ----------
+  await page.getByText('DELIVERY').first().waitFor();
+  const bd = await box('.maze-board');
+  // BFS the grid, then drag the car cell by cell along the path
+  const grid = await page.evaluate(() => window.__MAZE__);
+  const G = grid || [
+    'S..#.....','##.#.###.','.....#...','.###.#.##','.#...#...',
+    '.#.###.#.','...#...#.','.###.##..','.....#.#.','####.#.#.','.......#H'];
+  const R = G.length, C = G[0].length;
+  const at = (r, c) => (r < 0 || c < 0 || r >= R || c >= C ? '#' : G[r][c]);
+  let S, H;
+  for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) { if (G[r][c] === 'S') S = [r, c]; if (G[r][c] === 'H') H = [r, c]; }
+  const prev = new Map(); const q = [S]; const seen = new Set([S.join()]);
+  while (q.length) {
+    const [r, c] = q.shift();
+    if (r === H[0] && c === H[1]) break;
+    for (const [dr, dc] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+      const nr = r + dr, nc = c + dc;
+      if (at(nr, nc) === '#' || seen.has(nr + ',' + nc)) continue;
+      seen.add(nr + ',' + nc); prev.set(nr + ',' + nc, [r, c]); q.push([nr, nc]);
+    }
+  }
+  const path = []; let cur = H;
+  while (cur && !(cur[0] === S[0] && cur[1] === S[1])) { path.unshift(cur); cur = prev.get(cur.join()); }
+  const px = (c) => bd.x + ((c + 0.5) / C) * bd.width;
+  const py = (r) => bd.y + ((r + 0.5) / R) * bd.height;
+  await page.mouse.move(px(S[1]), py(S[0]));
   await page.mouse.down();
-  for (let i = 1; i <= 40; i++) {
-    const x = pad.x + 20 + ((pad.width - 40) * i) / 40;
-    const y = pad.y + pad.height / 2 + Math.sin(i / 2.2) * 26;
-    await page.mouse.move(x, y);
+  for (const [r, c] of path) {
+    for (let k = 0; k < 4; k++) await page.mouse.move(px(c), py(r));
+    await page.waitForTimeout(18);
   }
   await page.mouse.up();
-  await btn('EXECUTE AGREEMENT').click();
-  await page.getByText('SIGNATURE ACCEPTED').waitFor();
-  await page.getByText(/Dues are \$50/).waitFor();
-  ok('trial 5: terms are only readable after signing');
-  await btn('I HAVE MADE A HUGE MISTAKE').click();
+  await page.getByText('You found the house.', { exact: false }).waitFor({ timeout: 10000 });
+  ok('trial 4: the car drives the maze to the house');
 
-  // ---------- TRIAL 6: press and hold to stamp ----------
-  await page.getByText('SEAL YOUR ENTRY').waitFor();
-  const wax = await box('.wax');
-  await page.mouse.move(wax.x + wax.width / 2, wax.y + wax.height / 2);
-  await page.mouse.down();
-  await page.waitForTimeout(2100);
-  await page.mouse.up();
-  ok('trial 6: holding stamps the seal');
+  // ---------- TRIAL 5: DOOR ----------
+  await page.getByText('KNOCK').waitFor({ timeout: 10000 });
+  const door = await box('.door');
+  for (let i = 0; i < 3; i++) {
+    await page.mouse.click(door.x + door.width / 2, door.y + door.height / 2);
+    await page.waitForTimeout(160);
+  }
+  await page.getByText('All Corners', { exact: false }).waitFor({ timeout: 8000 });
+  ok('trial 5: three knocks brings someone to the door');
+  // wrong answer first
+  await btn('9').click();
+  await btn('OK').click();
+  await page.getByText('That is not it.').waitFor();
+  ok('trial 5: wrong ounces rejected');
+  await btn('1').click();
+  await btn('1').click();
+  await btn('OK').click();
+  await page.locator('.door.open').waitFor({ timeout: 6000 });
+  ok('trial 5: 11 oz opens the door');
 
   // ---------- FINALE ----------
-  await page.getByText('Initiation Complete').waitFor({ timeout: 10000 });
-  await page.getByText('THE HUNGRY HOMIES').waitFor();
-  ok('finale: welcome card');
-  await btn('VIEW YOUR RECORD').click();
-  await page.getByText('INITIATION RECORD').waitFor();
-  await page.getByText('EGO INFLATED TO').waitFor();
+  await page.getByText('WELCOME TO THE LEAGUE').waitFor({ timeout: 10000 });
+  await page.getByText('HUNGRY HOMIES').waitFor();
+  if (await page.locator('.confetti .cf').count() < 40) throw new Error('no confetti');
+  if (await page.locator('.finale-card .hh-logo').count() !== 1) throw new Error('logo missing from finale');
   await page.getByText('ACCEPT LEAGUE INVITATION').waitFor();
-  ok('finale: record + invite button');
+  ok('finale: confetti, logo, welcome and the invite button');
 
-  // real punishment text landed on the record
-  const rec = await page.locator('.shift-report').innerText();
-  if (!/TRAMP|WAFFLE|MILK|SUSHI|MOM|SHAVE|PORTRAITS|JERSEY/.test(rec)) {
-    throw new Error('no punishment recorded on the report');
-  }
-  ok('finale: the punishment they actually spun is on the record');
-
-  // ---------- persistence + gating ----------
   await page.reload();
-  await page.getByText('Initiation Complete').waitFor();
+  await page.getByText('WELCOME TO THE LEAGUE').waitFor();
   ok('finale survives refresh');
 
   const p2 = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
   await p2.goto(BASE);
-  const fresh = await p2.getByText('You are the lucky one.').isVisible().catch(() => false);
-  const leaked = await p2.getByText('Initiation Complete').isVisible().catch(() => false);
+  const fresh = await p2.getByText('You have been chosen.').isVisible().catch(() => false);
+  const leaked = await p2.getByText('WELCOME TO THE LEAGUE').isVisible().catch(() => false);
   if (fresh && !leaked) ok('a fresh visitor starts at the envelope, not the finale');
   else fail('gating', `fresh=${fresh} leaked=${leaked}`);
   await p2.close();
 
   if (errors.length) fail('no page errors', errors.join(' | '));
   else ok('no uncaught page errors');
-  console.log(`\n  scripted run took ${((Date.now() - t0) / 1000).toFixed(0)}s of machine time`);
 } catch (e) {
   fail('playthrough', e.message);
   await page.screenshot({ path: 'scripts/failure.png', fullPage: true }).catch(() => {});

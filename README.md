@@ -1,17 +1,21 @@
 # The Hungry Homies — Initiation
 
-An absurdly prestigious golden invitation that makes the recipient survive a
-six-trial initiation before their fantasy football league invite is revealed.
-Mobile-first, ~5 minutes. Every trial is a physical gesture, not a puzzle.
+A gold-foil Hungry Howie's golden ticket that makes the recipient work through
+five hands-on trials before the fantasy football league invite is revealed.
+Mobile-first, ~5 minutes. Every trial is a physical interaction, not a puzzle.
 
-| # | Trial | Gesture | The joke |
+| # | Trial | What you do | The turn |
 | --- | --- | --- | --- |
-| 1 | Eligibility ticket | scratch the foil off | you win "consideration" |
-| 2 | The Commissioner's ego | press and hold to inflate | it never says stop, it pops at 41 PSI |
-| 3 | Draft night | mash to chug two beers | the whole app stays crooked afterward |
-| 4 | Last place punishment | flick to spin | the Commissioner forces a re-spin |
-| 5 | League covenant | draw your signature | you can only read the terms after signing |
-| 6 | The seal | press and hold to stamp | — |
+| 1 | The Machine | drag the lever to pull the slot handle | it only ever hits on MAX BET — then three middle fingers |
+| 2 | Make One Pizza | smear sauce, sprinkle cheese, tap pepperoni | order is enforced; it tells you off if you skip ahead |
+| 3 | The Balloon Wall | flick darts at a fairground wall | one balloon holds a slip of paper; the rest recede |
+| 4 | Delivery | drag the Howie's car through a street maze | ends at the house, which becomes the door |
+| 5 | The Door | knock three times, answer through the door | "How many oz is an All Corners dough ball?" — 11 |
+
+The paper in trial 3 is Howie's Book of Records: **Kory & Jason, Dough Champs**.
+It has to be acknowledged before you can move on.
+
+Correct answer at the door opens it into confetti, the welcome, and the league link.
 
 ## Run it
 
@@ -49,11 +53,12 @@ Never visible to normal players.
 
 ```bash
 npm run build && npx vite preview --port 4173
-node scripts/playthrough.mjs   # Playwright E2E driving REAL gestures: drags the
-                               # envelope open, scratches the foil, holds until the
-                               # ego pops, mashes both beers, flicks the wheel twice,
-                               # draws a signature, holds the stamp. Also checks
-                               # refresh persistence and finale gating.
+node scripts/playthrough.mjs   # Playwright E2E driving REAL gestures: tears the
+                               # envelope, pulls the slot lever (asserts min bet
+                               # loses and MAX BET lands 3 fingers), sauces/cheeses/
+                               # peps the pizza, flicks darts until the paper drops,
+                               # BFS-solves and drives the maze, knocks, answers 11.
+                               # Also checks refresh persistence and finale gating.
 node scripts/screens.mjs       # screenshots every trial for visual QA
 ```
 
@@ -65,12 +70,17 @@ node scripts/screens.mjs       # screenshots every trial for visual QA
 | `src/data/trials.js` | ALL copy, jokes, and tuning numbers for every trial. Change content here, not in components. |
 | `src/persistence.js` | storage adapter. Implement the same 5-method interface with Supabase and swap it in `createStorage()` to add the shared leaderboard — game code doesn't change. Invite tokens read from `?t=`. |
 | `src/GameContext.jsx` | game state, stats tracking, autosave |
-| `src/components/trials/` | one component per trial (T1Scratch … T6Seal) |
+| `src/components/trials/` | one component per trial (T1Slot … T5Door) |
+| `src/components/art.jsx` | logo, middle finger, slot symbols, delivery car |
+| `src/assets/howies-logo.png` | official logo, white background knocked out, inlined at build |
 | `src/sound.js` | WebAudio-synthesized SFX (no assets), mute routes through one gain |
 
 ## Tuning it
 
-Everything you'd want to change is copy or a number in `src/data/trials.js`:
-punishments on the wheel, covenant terms, the escalating pressure-gauge taunts,
-how many beers, `popAt` PSI, scratch `threshold`, signature `minStroke`, seal
-`holdMs`. No component changes needed.
+Copy and numbers all live in `src/data/trials.js`: the slot taunts and bet
+levels, pizza coverage thresholds, balloon count, the Book of Records note,
+the maze grid (`'#'` building, `'.'` road, `S` store, `H` house), and the door
+question and answer. No component changes needed.
+
+The maze is validated as solvable by the playthrough, which BFS-solves it
+before driving — edit the grid freely and the test will catch a walled-off house.
