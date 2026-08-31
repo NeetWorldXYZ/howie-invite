@@ -4,15 +4,22 @@
 // ============================================================
 
 export const OPENING = {
-  eyebrow: 'ONE OF TWELVE',
+  eyebrow: 'ONE OF TEN',
   chosen: 'You have been chosen.',
-  subline: 'Twelve were printed. This one found you.',
-  tearHint: 'DRAG ACROSS TO OPEN',
+  subline: 'Ten were printed. This one found you.',
+  sealHint: 'PULL THE SEAL',
+};
+
+export const ENVELOPE = {
+  addressedTo: 'To the bearer of',
+  addressLine: 'No. 007',
+  postmark: { city: 'FLAT ROCK MI', date: 'AUG 31 2026' },
+  stampValue: 'FIRST CLASS',
 };
 
 export const TICKET = {
   admit: 'ADMIT ONE',
-  serial: 'No. 007 / 012',
+  serial: 'No. 007 / 010',
   kicker: 'Golden Ticket',
   league: 'HUNGRY HOMIES',
   year: '2026',

@@ -231,6 +231,22 @@ export const sfx = {
       noise({ dur: 0.07, vol: 0.05, at: 0.5 + i * 0.09, low: 3000, high: 9000 });
     }
   },
+  // --- the reveal ---
+  waxCrack() {
+    noise({ dur: 0.05, vol: 0.34, low: 700, high: 5200 });
+    tone({ freq: 240, dur: 0.16, type: 'square', vol: 0.16, slide: -150 });
+    for (let i = 0; i < 5; i++) {
+      noise({ dur: 0.05, vol: 0.07, at: 0.06 + i * 0.05, low: 900, high: 4200 });
+    }
+  },
+  flapOpen() {
+    noise({ dur: 0.42, vol: 0.1, low: 900, high: 4600 });
+    tone({ freq: 180, dur: 0.3, type: 'sine', vol: 0.05, slide: 60 });
+  },
+  cardSlide() {
+    noise({ dur: 0.62, vol: 0.11, low: 1300, high: 5600 });
+    tone({ freq: 320, dur: 0.5, type: 'sine', vol: 0.04, slide: 220 });
+  },
   tap() { tone({ freq: 1800, dur: 0.03, type: 'square', vol: 0.06 }); },
   paper() { noise({ dur: 0.18, vol: 0.08, low: 1500, high: 6000 }); },
   chime() {

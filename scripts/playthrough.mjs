@@ -21,22 +21,57 @@ try {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 
-  // ---------- ENVELOPE -> GOLDEN TICKET ----------
+  // ---------- THE REVEAL ----------
   await page.getByText('You have been chosen.').waitFor();
-  if (await page.locator('.envelope .hh-logo').count() !== 1) throw new Error('logo missing from envelope');
-  ok('envelope shows the embossed Howie\'s logo');
-  const env = await box('.envelope');
-  await page.mouse.move(env.x + 14, env.y + env.height / 2);
+  await page.getByText('ONE OF TEN').waitFor();
+  ok('opening says one of ten');
+  if (await page.locator('.env-front .env-address').count() !== 1) throw new Error('envelope is not addressed');
+  if (await page.locator('.env-stamp .hh-logo').count() !== 1) throw new Error('no Howie stamp on the envelope');
+  if (await page.locator('.env-postmark').count() !== 1) throw new Error('no postmark');
+  ok('envelope is addressed, stamped and postmarked');
+
+  // the card starts tucked inside, its face hidden
+  if (await page.locator('.gt-inner.shown').count() !== 0) throw new Error('card face visible before opening');
+  ok('card face is hidden while it is still in the envelope');
+
+  // pull the wax seal to break it
+  const seal = await box('.wax-seal');
+  await page.mouse.move(seal.x + seal.width / 2, seal.y + seal.height / 2);
   await page.mouse.down();
-  for (let i = 1; i <= 24; i++) {
-    await page.mouse.move(env.x + 14 + (env.width * 0.78 * i) / 24, env.y + env.height / 2);
-    await page.waitForTimeout(10);
+  for (let i = 1; i <= 12; i++) {
+    await page.mouse.move(seal.x + seal.width / 2, seal.y + seal.height / 2 + i * 8);
+    await page.waitForTimeout(14);
   }
   await page.mouse.up();
-  await page.locator('.gticket').waitFor({ timeout: 8000 });
-  if (await page.locator('.gticket .hh-logo').count() !== 1) throw new Error('logo missing from ticket');
+  // the shards fade as they fall, so assert on attachment rather than visibility
+  await page.locator('.wax-seal.broken').waitFor({ state: 'attached', timeout: 4000 });
+  ok('pulling the wax seal breaks it');
+
+  // choreography: flap opens, card rises, card comes forward
+  await page.locator('.reveal-scene.stage-open').waitFor({ timeout: 4000 });
+  ok('flap opens');
+  await page.locator('.reveal-scene.stage-rise').waitFor({ timeout: 5000 });
+  ok('card slides up out of the envelope');
+  await page.locator('.reveal-scene.stage-hero').waitFor({ timeout: 6000 });
+  await page.waitForTimeout(1500);
+  ok('card comes forward and the envelope falls away');
+
+  // it is the SAME card element the whole way, never a screen swap
+  if (await page.locator('.gticket').count() !== 1) throw new Error('more than one card element');
+  ok('one card element from envelope to hand');
+
   await page.getByText('ADMIT ONE').waitFor();
-  ok('tearing it open reveals the golden ticket with the logo');
+  await page.getByText('No. 007 / 010').waitFor();
+  ok('card reads No. 007 / 010 for a ten-team league');
+  if (await page.locator('.gticket .hh-logo').count() !== 1) throw new Error('logo missing from card');
+  ok('card carries the logo');
+
+  // reopening later must not replay the whole reveal
+  await page.reload();
+  await page.locator('.reveal-scene.stage-hero').waitFor({ timeout: 6000 });
+  if (await page.locator('.wax-seal').count() !== 0) throw new Error('reveal replayed after refresh');
+  ok('refreshing after the reveal does not replay it');
+
   await btn('BEGIN INITIATION').click();
 
   // ---------- TRIAL 1: SLOT ----------
