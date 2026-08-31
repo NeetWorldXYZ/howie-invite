@@ -1,20 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useGame } from '../../GameContext.jsx';
 import { DARTS } from '../../data/trials.js';
+import { Dart } from '../art.jsx';
 import { sfx } from '../../sound.js';
 
-const COLORS = ['#c0281c', '#1f6ea8', '#4e7a3f', '#c9a227', '#8a3fa8', '#c85a1e'];
+const COLORS = ['#d0342a', '#1f6ea8', '#3f8a46', '#e0b021', '#8a3fa8', '#d9631e', '#c72d6a'];
 
 function makeBalloons(n) {
-  const cols = 4;
+  const cols = 5;
   const arr = [];
   for (let i = 0; i < n; i++) {
     const c = i % cols, r = Math.floor(i / cols);
     arr.push({
       id: i,
-      x: 3.5 + c * 25.2 + (r % 2 ? 2 : 0),
-      y: 13 + r * 25,
-      color: COLORS[i % COLORS.length],
+      x: 6 + c * 18 + (r % 2 ? 4 : 0),
+      y: 10 + r * 26,
+      color: COLORS[(i * 3) % COLORS.length],
+      tilt: -8 + ((i * 37) % 16),
+      pitch: 0.82 + ((i * 13) % 9) * 0.06,
       popped: false,
     });
   }
@@ -25,80 +28,84 @@ export default function T3Darts() {
   const { advance, stat } = useGame();
   const wallRef = useRef(null);
   const aim = useRef(null);
-  const throwCount = useRef(0);
+  const thrown = useRef(0);
 
   const [balloons, setBalloons] = useState(() => makeBalloons(DARTS.balloonCount));
   const [prizeId] = useState(() => Math.floor(Math.random() * DARTS.balloonCount));
-  const [dart, setDart] = useState(null);       // in-flight dart
-  const [stuck, setStuck] = useState([]);       // darts stuck in the board
+  const [flying, setFlying] = useState(null);
+  const [stuck, setStuck] = useState([]);
+  const [shreds, setShreds] = useState([]);
   const [msg, setMsg] = useState('');
-  const [phase, setPhase] = useState('throw');  // throw | paper | note
-  const [paperPos, setPaperPos] = useState({ x: 50, y: 60 });
+  const [phase, setPhase] = useState('throw'); // throw | paper | note
+  const [paperPos, setPaperPos] = useState({ x: 50, y: 55 });
 
-  // paper drifts until touched
+  useEffect(() => { sfx.midway(); }, []);
+
   useEffect(() => {
     if (phase !== 'paper') return;
     let t = 0;
     const id = setInterval(() => {
       t += 1;
-      setPaperPos({ x: 50 + Math.sin(t / 9) * 22, y: 52 + Math.cos(t / 7) * 16 });
-    }, 90);
+      setPaperPos({ x: 50 + Math.sin(t / 9) * 24, y: 50 + Math.cos(t / 6.5) * 18 });
+    }, 100);
     return () => clearInterval(id);
   }, [phase]);
 
   const throwDart = (vx, vy) => {
     const wall = wallRef.current.getBoundingClientRect();
-    // normalize the flick into a direction, then find the first balloon near that ray
     const len = Math.hypot(vx, vy) || 1;
     const dx = vx / len, dy = vy / len;
-    const originX = 50, originY = 104; // % coords, dart starts below the wall
+    const originX = 50, originY = 112;
     let hit = null, hitT = Infinity;
     for (const b of balloons) {
       if (b.popped) continue;
-      // ray/point distance in percentage space (wall aspect corrected)
-      const bx = b.x + 7.5, by = b.y + 9;
+      const bx = b.x + 6.5, by = b.y + 9;
       const px = bx - originX, py = (by - originY) * (wall.height / wall.width);
       const t = px * dx + py * dy;
       if (t <= 0) continue;
       const perp = Math.abs(px * dy - py * dx);
-      if (perp < 9 && t < hitT) { hitT = t; hit = b; }
+      if (perp < 8 && t < hitT) { hitT = t; hit = b; }
     }
 
-    const target = hit ? { x: hit.x + 7.5, y: hit.y + 9 } : { x: originX + dx * 90, y: originY + dy * 90 };
-    setDart({ ...target, flying: true });
-    sfx.whoosh();
+    const target = hit ? { x: hit.x + 6.5, y: hit.y + 9 } : { x: originX + dx * 95, y: originY + dy * 95 };
+    setFlying({ ...target, rot: Math.atan2(dy, dx) * (180 / Math.PI) + 90 });
+    sfx.dartThrow();
 
     setTimeout(() => {
-      setDart(null);
-      throwCount.current += 1;
-      stat('darts', throwCount.current);
+      setFlying(null);
+      thrown.current += 1;
+      stat('darts', thrown.current);
       if (hit) {
-        sfx.balloonPop();
+        sfx.balloonPop(hit.pitch);
         setBalloons((bs) => bs.map((b) => (b.id === hit.id ? { ...b, popped: true } : b)));
+        setShreds((s) => [...s, { id: hit.id, x: hit.x + 6.5, y: hit.y + 9, color: hit.color }]);
+        setTimeout(() => setShreds((s) => s.filter((x) => x.id !== hit.id)), 700);
         if (hit.id === prizeId) {
           setMsg(DARTS.noteFound);
-          setTimeout(() => setPhase('paper'), 700);
+          sfx.prizeBell();
+          setTimeout(() => { sfx.flutter(); setPhase('paper'); }, 750);
         } else {
-          setMsg('');
+          setMsg(DARTS.popText[thrown.current % DARTS.popText.length]);
         }
       } else {
-        sfx.thunk();
-        setStuck((s) => [...s, target]);
-        setMsg(DARTS.missText[throwCount.current % DARTS.missText.length]);
+        sfx.boardThunk();
+        setStuck((s) => [...s, { ...target, rot: Math.atan2(dy, dx) * (180 / Math.PI) + 90 }]);
+        setMsg(DARTS.missText[thrown.current % DARTS.missText.length]);
       }
-    }, 320);
+    }, 300);
   };
 
   const down = (e) => {
-    if (phase !== 'throw' || dart) return;
+    if (phase !== 'throw' || flying) return;
     aim.current = { x: e.clientX, y: e.clientY };
+    sfx.dartReady();
   };
   const up = (e) => {
-    if (!aim.current || phase !== 'throw' || dart) return;
+    if (!aim.current || phase !== 'throw' || flying) return;
     const dx = e.clientX - aim.current.x;
     const dy = e.clientY - aim.current.y;
     aim.current = null;
-    if (Math.hypot(dx, dy) < 24) return; // not a throw
+    if (Math.hypot(dx, dy) < 22) return;
     throwDart(dx, dy);
   };
 
@@ -117,9 +124,7 @@ export default function T3Darts() {
           <div className="rn-rule" />
           <p className="rn-detail">{n.detail}</p>
         </div>
-        <button className="btn primary block" onClick={() => { sfx.chime(); advance(); }}>
-          {n.ack}
-        </button>
+        <button className="btn primary block" onClick={() => { sfx.chime(); advance(); }}>{n.ack}</button>
       </div>
     );
   }
@@ -131,24 +136,51 @@ export default function T3Darts() {
         <h2 className="trial-title">{phase === 'paper' ? DARTS.paperHint : DARTS.sub}</h2>
       </header>
 
-      <div
-        className="dart-scene"
-        onPointerDown={down}
-        onPointerUp={up}
-        onPointerCancel={() => { aim.current = null; }}
-      >
-        <div className={'balloon-wall' + (phase === 'paper' ? ' receded' : '')} ref={wallRef}>
-          {balloons.map((b) => (
-            <span
-              key={b.id}
-              className={'balloon' + (b.popped ? ' popped' : '')}
-              style={{ left: `${b.x}%`, top: `${b.y}%`, background: b.color, '--c': b.color }}
-            />
-          ))}
-          {stuck.map((s, i) => (
-            <span key={i} className="dart stuck" style={{ left: `${s.x}%`, top: `${s.y}%` }} />
-          ))}
-          {dart && <span className="dart flying" style={{ left: `${dart.x}%`, top: `${dart.y}%` }} />}
+      <div className="dart-scene" onPointerDown={down} onPointerUp={up} onPointerCancel={() => { aim.current = null; }}>
+        <div className="booth">
+          <div className="booth-awning">
+            <span className="booth-banner">{DARTS.banner}</span>
+          </div>
+          <div className="booth-lights">
+            {Array.from({ length: 11 }, (_, i) => <span key={i} style={{ '--i': i }} />)}
+          </div>
+
+          <div className={'balloon-wall' + (phase === 'paper' ? ' receded' : '')} ref={wallRef}>
+            {balloons.map((b) => (
+              <span
+                key={b.id}
+                className={'balloon' + (b.popped ? ' popped' : '')}
+                style={{
+                  left: `${b.x}%`, top: `${b.y}%`,
+                  '--c': b.color, '--tilt': `${b.tilt}deg`,
+                }}
+              >
+                <i className="bl-shine" />
+                <i className="bl-knot" />
+              </span>
+            ))}
+
+            {shreds.map((s) => (
+              <span key={'s' + s.id} className="shreds" style={{ left: `${s.x}%`, top: `${s.y}%` }}>
+                {Array.from({ length: 8 }, (_, i) => (
+                  <i key={i} style={{ '--a': `${i * 45}deg`, background: s.color }} />
+                ))}
+              </span>
+            ))}
+
+            {stuck.map((s, i) => (
+              <span key={i} className="dart-stuck" style={{ left: `${s.x}%`, top: `${s.y}%`, transform: `translate(-50%,-88%) rotate(${s.rot}deg)` }}>
+                <Dart length={38} />
+              </span>
+            ))}
+            {flying && (
+              <span className="dart-flying" style={{ left: `${flying.x}%`, top: `${flying.y}%`, transform: `translate(-50%,-88%) rotate(${flying.rot}deg)` }}>
+                <Dart length={38} />
+              </span>
+            )}
+          </div>
+
+          <div className="booth-rail" />
         </div>
 
         {phase === 'paper' && (
@@ -161,7 +193,9 @@ export default function T3Darts() {
           </button>
         )}
 
-        {phase === 'throw' && <div className="dart-ready"><span className="dart" /></div>}
+        {phase === 'throw' && (
+          <div className="dart-ready"><Dart length={46} /></div>
+        )}
       </div>
 
       <div className="slot-msg">{phase === 'paper' ? '' : msg || DARTS.hint}</div>

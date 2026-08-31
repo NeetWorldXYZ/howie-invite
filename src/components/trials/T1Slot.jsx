@@ -45,8 +45,9 @@ export default function T1Slot() {
   const dragging = useRef(false);
   const startY = useRef(0);
   const timers = useRef([]);
+  const whir = useRef(null);
 
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  useEffect(() => () => { timers.current.forEach(clearTimeout); whir.current?.stop(); }, []);
   const later = (fn, ms) => timers.current.push(setTimeout(fn, ms));
 
   const isMax = bet.id === 'max';
@@ -54,6 +55,7 @@ export default function T1Slot() {
   const pull = () => {
     if (spinning || jackpot) return;
     sfx.lever();
+    whir.current = sfx.reelWhir();
     setSpinning(true);
     setMessage('');
     setCredits((c) => Math.max(0, c - bet.amount));
@@ -65,6 +67,7 @@ export default function T1Slot() {
     // reels stop left-to-right
     [0, 1, 2].forEach((i) => {
       later(() => {
+        if (i === 2) { whir.current?.stop(); whir.current = null; }
         sfx.reelStop();
         setReels((r) => {
           const next = [...r];
@@ -84,9 +87,12 @@ export default function T1Slot() {
         setJackpot(true);
         stat('jackpotOnPull', n);
         sfx.jackpot();
+        sfx.jackpotBell();
         later(advance, SLOT.jackpotHoldMs);
       } else {
-        sfx.deny();
+        // two reels always match — let the tease land before the buzzer
+        sfx.nearMiss();
+        later(() => sfx.deny(), 620);
         setMessage(SLOT.losses[Math.min(n - 1, SLOT.losses.length - 1)]);
       }
     }, 700 + 2 * 420 + 260);
@@ -169,7 +175,7 @@ export default function T1Slot() {
             key={b.id}
             className={'bet-btn' + (bet.id === b.id ? ' on' : '') + (b.id === 'max' && nudgeMax ? ' nudge' : '')}
             disabled={spinning || jackpot}
-            onClick={() => { sfx.beep(); setBet(b); }}
+            onClick={() => { b.id === 'max' ? sfx.betMax() : sfx.beep(); setBet(b); }}
           >
             {b.label}
           </button>

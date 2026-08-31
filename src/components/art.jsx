@@ -1,5 +1,6 @@
 import React from 'react';
 import logoUrl from '../assets/howies-logo.png';
+import fingerUrl from '../assets/middle-finger.png';
 
 // Official Hungry Howie's logo, background knocked out.
 export function Logo({ width = 150, className = '', style }) {
@@ -8,27 +9,22 @@ export function Logo({ width = 150, className = '', style }) {
       src={logoUrl}
       alt="Hungry Howie's"
       className={'hh-logo ' + className}
-      width={width}
       style={{ width, height: 'auto', ...style }}
       draggable={false}
     />
   );
 }
 
-// The jackpot symbol. Drawn, not an emoji, so it looks the same everywhere.
-export function MiddleFinger({ size = 46 }) {
+// The jackpot symbol — the real photo, cut out.
+export function MiddleFinger({ height = 78 }) {
   return (
-    <svg viewBox="0 0 64 100" width={size} height={size * 1.56} aria-label="jackpot">
-      <g stroke="#3a2412" strokeWidth="3.4" strokeLinejoin="round" strokeLinecap="round">
-        <rect x="24" y="4" width="17" height="50" rx="8.5" fill="#f2cba6" />
-        <rect x="4" y="56" width="17" height="26" rx="8.5" fill="#e8bb92" transform="rotate(-16 12 69)" />
-        <rect x="11" y="46" width="44" height="46" rx="15" fill="#f2cba6" />
-        <rect x="15" y="52" width="14" height="13" rx="6.5" fill="#e0b087" />
-        <rect x="31" y="51" width="14" height="13" rx="6.5" fill="#e0b087" />
-        <rect x="45" y="54" width="13" height="13" rx="6.5" fill="#e0b087" />
-        <rect x="16" y="66" width="14" height="12" rx="6" fill="#e0b087" />
-      </g>
-    </svg>
+    <img
+      src={fingerUrl}
+      alt="jackpot"
+      className="mf-img"
+      style={{ height, width: 'auto' }}
+      draggable={false}
+    />
   );
 }
 
@@ -68,7 +64,6 @@ export function SlotSymbol({ kind, size = 44 }) {
       </svg>
     );
   }
-  // DOUGH
   return (
     <svg viewBox="0 0 48 48" style={s}>
       <circle cx="24" cy="26" r="14" fill="#eeddb4" stroke="#a8894a" strokeWidth="2.5" />
@@ -77,16 +72,43 @@ export function SlotSymbol({ kind, size = 44 }) {
   );
 }
 
-// The delivery car, seen from above, with a lit car-topper.
-export function DeliveryCar({ size = 30 }) {
+// Delivery car from above, with a lit Hungry Howie's roof topper.
+export function DeliveryCar({ size = 34, heading = 0 }) {
   return (
-    <svg viewBox="0 0 40 60" width={size} height={size * 1.5}>
-      <rect x="4" y="6" width="32" height="50" rx="9" fill="#c0281c" stroke="#5e120c" strokeWidth="2.5" />
-      <rect x="9" y="12" width="22" height="12" rx="4" fill="#2b3a48" />
-      <rect x="9" y="36" width="22" height="11" rx="4" fill="#2b3a48" />
-      <rect x="7" y="26" width="26" height="9" rx="3" fill="#edd282" stroke="#8a6d14" strokeWidth="1.6" />
-      <circle cx="12" cy="9" r="2.4" fill="#fff6d5" />
-      <circle cx="28" cy="9" r="2.4" fill="#fff6d5" />
+    <svg viewBox="0 0 46 74" width={size} height={size * 1.61} style={{ transform: `rotate(${heading}deg)`, transition: 'transform 0.14s ease' }}>
+      {/* body */}
+      <rect x="3" y="4" width="40" height="66" rx="12" fill="#b8241a" stroke="#590f09" strokeWidth="2.5" />
+      <rect x="6" y="8" width="34" height="58" rx="10" fill="none" stroke="rgba(255,180,160,0.35)" strokeWidth="1.4" />
+      {/* windshields */}
+      <path d="M10 15 h26 l-3 10 h-20 z" fill="#243444" />
+      <path d="M7 52 h32 l-3 -9 h-26 z" fill="#243444" />
+      {/* roof topper — the branded sign */}
+      <g>
+        <rect x="6" y="27" width="34" height="15" rx="3.5" fill="#f2c73c" stroke="#7d5c08" strokeWidth="1.6" />
+        <rect x="6" y="27" width="34" height="6" rx="3" fill="#c0281c" />
+        <text x="23" y="40" textAnchor="middle" fontFamily="Inter, sans-serif" fontSize="7.5" fontWeight="800" fill="#7d1a10">HOWIE'S</text>
+      </g>
+      {/* headlights + mirrors */}
+      <circle cx="11" cy="7" r="2.4" fill="#fff6d5" />
+      <circle cx="35" cy="7" r="2.4" fill="#fff6d5" />
+      <rect x="0" y="24" width="4" height="7" rx="2" fill="#8e1a12" />
+      <rect x="42" y="24" width="4" height="7" rx="2" fill="#8e1a12" />
+    </svg>
+  );
+}
+
+// A carnival dart: steel tip, barrel, and flights.
+export function Dart({ length = 42 }) {
+  const w = length * 0.38;
+  return (
+    <svg viewBox="0 0 22 60" width={w} height={length}>
+      <path d="M11 0 L14 12 H8 Z" fill="#cfd4dc" stroke="#767c88" strokeWidth="1" />
+      <rect x="7.5" y="11" width="7" height="22" rx="3" fill="#b8241a" stroke="#6d130c" strokeWidth="1.2" />
+      <rect x="8.5" y="15" width="5" height="2" fill="rgba(255,255,255,0.4)" />
+      <rect x="8.5" y="20" width="5" height="2" fill="rgba(255,255,255,0.4)" />
+      <path d="M11 32 L2 48 L11 44 Z" fill="#f2c73c" stroke="#8a6d14" strokeWidth="1.1" />
+      <path d="M11 32 L20 48 L11 44 Z" fill="#e8bd3a" stroke="#8a6d14" strokeWidth="1.1" />
+      <rect x="10" y="31" width="2" height="20" rx="1" fill="#8a8f99" />
     </svg>
   );
 }

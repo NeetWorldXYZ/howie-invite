@@ -1,41 +1,50 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useGame } from '../../GameContext.jsx';
 import { MAZE } from '../../data/trials.js';
-import { DeliveryCar } from '../art.jsx';
+import { DeliveryCar, Logo } from '../art.jsx';
 import { sfx } from '../../sound.js';
 
 const GRID = MAZE.grid;
 const ROWS = GRID.length;
 const COLS = GRID[0].length;
+const CAR_R = 0.26;
 
 const cellAt = (r, c) => (r < 0 || c < 0 || r >= ROWS || c >= COLS ? '#' : GRID[r][c]);
-const findCell = (ch) => {
+const find = (ch) => {
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (GRID[r][c] === ch) return { r, c };
-  return { r: 0, c: 0 };
+  return { r: 1, c: 1 };
 };
 
 export default function T4Maze() {
   const { advance } = useGame();
   const boardRef = useRef(null);
   const dragging = useRef(false);
-  const engineAt = useRef(0);
-  const start = findCell('S');
-  const house = findCell('H');
+  const engine = useRef(null);
+  const bumpAt = useRef(0);
+  const start = find('S');
+  const house = find('H');
 
-  // position in cell units (floats), car is a circle of radius CAR_R cells
   const [pos, setPos] = useState({ x: start.c + 0.5, y: start.r + 0.5 });
+  const [heading, setHeading] = useState(180);
+  const [trail, setTrail] = useState([{ x: start.c + 0.5, y: start.r + 0.5 }]);
   const [arrived, setArrived] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const posRef = useRef(pos);
   posRef.current = pos;
 
-  const CAR_R = 0.3;
+  // count-up clock, purely for atmosphere
+  useEffect(() => {
+    if (arrived) return;
+    const id = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(id);
+  }, [arrived]);
+
+  const stopEngine = () => { engine.current?.stop(); engine.current = null; };
+  useEffect(() => stopEngine, []);
 
   const blocked = (x, y) => {
-    // sample the car's bounding box corners against the grid
     for (const [ox, oy] of [[-CAR_R, -CAR_R], [CAR_R, -CAR_R], [-CAR_R, CAR_R], [CAR_R, CAR_R]]) {
-      const c = Math.floor(x + ox), r = Math.floor(y + oy);
-      if (cellAt(r, c) === '#') return true;
-      if (x + ox < 0 || y + oy < 0 || x + ox > COLS || y + oy > ROWS) return true;
+      if (cellAt(Math.floor(y + oy), Math.floor(x + ox)) === '#') return true;
     }
     return false;
   };
@@ -47,44 +56,75 @@ export default function T4Maze() {
     const tx = ((e.clientX - b.left) / b.width) * COLS;
     const ty = ((e.clientY - b.top) / b.height) * ROWS;
     let { x, y } = posRef.current;
-    const steps = 8;
-    for (let i = 0; i < steps; i++) {
-      const nx = x + (tx - x) * 0.34;
-      const ny = y + (ty - y) * 0.34;
-      // slide on each axis independently so corridors feel forgiving
-      if (!blocked(nx, y)) x = nx;
-      if (!blocked(x, ny)) y = ny;
+    const from = { x, y };
+    let hitWall = false;
+    for (let i = 0; i < 8; i++) {
+      const nx = x + (tx - x) * 0.3;
+      const ny = y + (ty - y) * 0.3;
+      if (!blocked(nx, y)) x = nx; else hitWall = true;
+      if (!blocked(x, ny)) y = ny; else hitWall = true;
     }
-    setPos({ x, y });
+    const dx = x - from.x, dy = y - from.y;
+    const moved = Math.hypot(dx, dy);
+    if (moved > 0.004) {
+      setPos({ x, y });
+      setHeading(Math.atan2(dy, dx) * (180 / Math.PI) + 90);
+      setTrail((t) => {
+        const last = t[t.length - 1];
+        return Math.hypot(x - last.x, y - last.y) > 0.22 ? [...t, { x, y }] : t;
+      });
+    }
     const now = performance.now();
-    if (now - engineAt.current > 220) { engineAt.current = now; sfx.engine(); }
+    if (hitWall && moved < 0.01 && now - bumpAt.current > 320) { bumpAt.current = now; sfx.wallBump(); }
 
     if (Math.floor(y) === house.r && Math.floor(x) === house.c) {
       dragging.current = false;
+      stopEngine();
       setArrived(true);
       sfx.arrive();
-      setTimeout(advance, 2100);
+      setTimeout(advance, 1900);
     }
   };
 
+  const startDrag = (e) => {
+    if (arrived) return;
+    dragging.current = true;
+    if (!engine.current) engine.current = sfx.engineLoop();
+    move(e);
+  };
+  const endDrag = () => { dragging.current = false; stopEngine(); };
+
   useEffect(() => {
-    const stop = () => { dragging.current = false; };
-    window.addEventListener('pointerup', stop);
-    return () => window.removeEventListener('pointerup', stop);
+    window.addEventListener('pointerup', endDrag);
+    return () => window.removeEventListener('pointerup', endDrag);
   }, []);
 
+  const pct = (v, n) => `${(v / n) * 100}%`;
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const ss = String(elapsed % 60).padStart(2, '0');
+  const late = elapsed > 90;
+
   return (
-    <div className="trial">
-      <header className="trial-head">
-        <div className="trial-kicker">{MAZE.title}</div>
-        <h2 className="trial-title">{arrived ? MAZE.arrive : MAZE.sub}</h2>
-      </header>
+    <div className="trial maze-trial">
+      {/* driver's order slip — this is what makes it read as a delivery run */}
+      <div className="run-hud">
+        <Logo width={64} />
+        <div className="run-order">
+          <div className="run-num">ORDER {MAZE.order.num}</div>
+          <div className="run-items">{MAZE.order.items}</div>
+          <div className="run-addr">{MAZE.order.addr}</div>
+        </div>
+        <div className={'run-clock' + (late ? ' late' : '')}>
+          <span>{mm}:{ss}</span>
+          <small>{MAZE.promise}</small>
+        </div>
+      </div>
 
       <div
         className="maze-board"
         ref={boardRef}
         style={{ aspectRatio: `${COLS} / ${ROWS}` }}
-        onPointerDown={(e) => { dragging.current = true; move(e); }}
+        onPointerDown={startDrag}
         onPointerMove={move}
       >
         {GRID.map((row, r) =>
@@ -92,22 +132,45 @@ export default function T4Maze() {
             <div
               key={`${r}-${c}`}
               className={'mz ' + (ch === '#' ? 'mz-bldg' : 'mz-road')}
-              style={{ left: `${(c / COLS) * 100}%`, top: `${(r / ROWS) * 100}%`, width: `${100 / COLS}%`, height: `${100 / ROWS}%` }}
+              style={{ left: pct(c, COLS), top: pct(r, ROWS), width: pct(1, COLS), height: pct(1, ROWS) }}
             >
-              {ch === 'S' && <span className="mz-store">STORE</span>}
+              {ch === '#' && <i className="mz-roof" style={{ '--s': (r * 7 + c * 13) % 5 }} />}
+              {ch === 'S' && <span className="mz-store">HH</span>}
               {ch === 'H' && <span className="mz-house" />}
             </div>
           ))
         )}
-        <div
-          className="mz-car"
-          style={{ left: `${(pos.x / COLS) * 100}%`, top: `${(pos.y / ROWS) * 100}%` }}
-        >
-          <DeliveryCar size={Math.max(18, 240 / COLS)} />
+
+        {/* the route, drawn as you drive it */}
+        <svg className="mz-trail" viewBox={`0 0 ${COLS} ${ROWS}`} preserveAspectRatio="none">
+          <polyline
+            points={trail.map((p) => `${p.x},${p.y}`).join(' ')}
+            fill="none"
+            stroke="#edd282"
+            strokeWidth="0.13"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity="0.75"
+          />
+          <polyline
+            points={trail.map((p) => `${p.x},${p.y}`).join(' ')}
+            fill="none"
+            stroke="#fff6d5"
+            strokeWidth="0.05"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray="0.16 0.2"
+          />
+        </svg>
+
+        <div className="mz-car" style={{ left: pct(pos.x, COLS), top: pct(pos.y, ROWS) }}>
+          <DeliveryCar size={Math.max(17, 300 / COLS)} heading={heading} />
         </div>
       </div>
 
-      <div className="slot-msg">{arrived ? '' : MAZE.hint}</div>
+      <div className="slot-msg">
+        {arrived ? MAZE.arrive : late ? MAZE.lateNote : MAZE.hint}
+      </div>
     </div>
   );
 }

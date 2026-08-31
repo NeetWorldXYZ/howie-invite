@@ -50,12 +50,12 @@ try {
     await page.waitForTimeout(2200);
   };
   await pullLever();
-  if (await page.locator('.reel-final svg[aria-label="jackpot"]').count() > 0) throw new Error('jackpot hit on min bet');
+  if (await page.locator('.reel-final .mf-img').count() > 0) throw new Error('jackpot hit on min bet');
   ok('trial 1: min bet loses');
   await pullLever();
   await btn('MAX BET').click();
   await pullLever();
-  const fingers = await page.locator('.reel-final svg[aria-label="jackpot"]').count();
+  const fingers = await page.locator('.reel-final .mf-img').count();
   if (fingers !== 3) throw new Error(`expected 3 middle fingers on max bet, got ${fingers}`);
   ok('trial 1: MAX BET lands three middle fingers = jackpot');
   await page.getByText('MAKE ONE PIZZA').waitFor({ timeout: 12000 });
@@ -98,7 +98,7 @@ try {
   ok('trial 2: pepperoni placed, pizza sent');
 
   // ---------- TRIAL 3: DARTS ----------
-  await page.getByText('THE BALLOON WALL').waitFor();
+  await page.getByText('BALLOON POP').first().waitFor();
   const wall = await box('.balloon-wall');
   let found = false;
   for (let attempt = 0; attempt < 40 && !found; attempt++) {
@@ -126,13 +126,17 @@ try {
   await btn('ALL HAIL THE DOUGH CHAMPS').click();
 
   // ---------- TRIAL 4: MAZE ----------
-  await page.getByText('DELIVERY').first().waitFor();
+  // the maze header is the driver's order slip, not a title
+  await page.locator('.run-hud').waitFor();
+  await page.getByText('ORDER #4471').waitFor();
   const bd = await box('.maze-board');
   // BFS the grid, then drag the car cell by cell along the path
   const grid = await page.evaluate(() => window.__MAZE__);
   const G = grid || [
-    'S..#.....','##.#.###.','.....#...','.###.#.##','.#...#...',
-    '.#.###.#.','...#...#.','.###.##..','.....#.#.','####.#.#.','.......#H'];
+    '###########','#S#.....#.#','#.###.#.#.#','#...#.#...#','###.#.###.#',
+    '#...#.#...#','#.###.#.###','#.....#...#','#########.#','#...#...#.#',
+    '#.#.#.#.#.#','#.#...#.#.#','#.#####.#.#','#.#...#...#','#.#.#.#####',
+    '#...#....H#','###########'];
   const R = G.length, C = G[0].length;
   const at = (r, c) => (r < 0 || c < 0 || r >= R || c >= C ? '#' : G[r][c]);
   let S, H;
@@ -158,11 +162,16 @@ try {
     await page.waitForTimeout(18);
   }
   await page.mouse.up();
-  await page.getByText('You found the house.', { exact: false }).waitFor({ timeout: 10000 });
+  await page.getByText('You found the house.', { exact: false }).waitFor({ timeout: 20000 });
   ok('trial 4: the car drives the maze to the house');
+  const trailPts = await page.locator('.mz-trail polyline').first().getAttribute('points');
+  if (!trailPts || trailPts.split(' ').length < 20) throw new Error('route was not traced behind the car');
+  ok('trial 4: the route is traced behind the car');
+  if (await page.locator('.run-hud .hh-logo').count() !== 1) throw new Error('delivery HUD missing');
+  ok('trial 4: delivery order HUD is present');
 
   // ---------- TRIAL 5: DOOR ----------
-  await page.getByText('KNOCK').waitFor({ timeout: 10000 });
+  await page.getByText('KNOCK', { exact: true }).waitFor({ timeout: 10000 });
   const door = await box('.door');
   for (let i = 0; i < 3; i++) {
     await page.mouse.click(door.x + door.width / 2, door.y + door.height / 2);
@@ -170,6 +179,14 @@ try {
   }
   await page.getByText('All Corners', { exact: false }).waitFor({ timeout: 8000 });
   ok('trial 5: three knocks brings someone to the door');
+  // the whole exchange must sit on the door, with nothing below the fold
+  const overlayOnDoor = await page.locator('.door .door-panel').count() > 0
+    && await page.locator('.door-frame .door-overlay.ask').count() === 1;
+  if (!overlayOnDoor) throw new Error('question is not rendered on the door');
+  const scrollable = await page.evaluate(() =>
+    document.documentElement.scrollHeight - window.innerHeight);
+  if (scrollable > 4) throw new Error(`door trial requires scrolling (${scrollable}px overflow)`);
+  ok('trial 5: question + keypad sit on the door, no scrolling needed');
   // wrong answer first
   await btn('9').click();
   await btn('OK').click();

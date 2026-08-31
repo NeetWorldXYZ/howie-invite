@@ -63,6 +63,48 @@ function noise({ dur = 0.2, vol = 0.15, at = 0, low = 400, high = 4000 }) {
   src.start(t0);
 }
 
+
+// A sustained source you can start and stop — used for the reel whir
+// and the delivery engine, which need to run for an unknown duration.
+function loopNoise({ vol = 0.06, low = 300, high = 2200, wobble = 0 }) {
+  const c = ensure();
+  if (!c) return { stop() {} };
+  const len = Math.floor(c.sampleRate * 0.5);
+  const buf = c.createBuffer(1, len, c.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+  const bp = c.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.frequency.value = (low + high) / 2;
+  bp.Q.value = 1.1;
+  const g = c.createGain();
+  g.gain.setValueAtTime(0, c.currentTime);
+  g.gain.linearRampToValueAtTime(vol, c.currentTime + 0.05);
+  let lfo, lfoGain;
+  if (wobble) {
+    lfo = c.createOscillator();
+    lfo.frequency.value = wobble;
+    lfoGain = c.createGain();
+    lfoGain.gain.value = (high - low) / 3;
+    lfo.connect(lfoGain).connect(bp.frequency);
+    lfo.start();
+  }
+  src.connect(bp).connect(g).connect(master);
+  src.start();
+  return {
+    stop() {
+      const t = c.currentTime;
+      g.gain.cancelScheduledValues(t);
+      g.gain.setValueAtTime(g.gain.value, t);
+      g.gain.linearRampToValueAtTime(0, t + 0.07);
+      try { src.stop(t + 0.12); lfo && lfo.stop(t + 0.12); } catch { /* already stopped */ }
+    },
+  };
+}
+
 export const sfx = {
   scrape() { noise({ dur: 0.09, vol: 0.09, low: 900, high: 5200 }); },
   hiss() { noise({ dur: 0.14, vol: 0.05, low: 2200, high: 7000 }); },
@@ -73,6 +115,62 @@ export const sfx = {
   },
   click() { tone({ freq: 1500, dur: 0.022, type: 'square', vol: 0.07 }); },
   // --- slot machine ---
+  reelWhir() { return loopNoise({ vol: 0.05, low: 700, high: 2600, wobble: 26 }); },
+  nearMiss() {
+    // the two-matching tease: rising ding-ding that resolves nowhere
+    tone({ freq: 880, dur: 0.14, type: 'triangle', vol: 0.12 });
+    tone({ freq: 1174, dur: 0.16, type: 'triangle', vol: 0.11, at: 0.15 });
+    tone({ freq: 740, dur: 0.4, type: 'sine', vol: 0.07, at: 0.34, slide: -180 });
+  },
+  betMax() {
+    tone({ freq: 660, dur: 0.09, type: 'square', vol: 0.1 });
+    tone({ freq: 990, dur: 0.13, type: 'square', vol: 0.09, at: 0.08 });
+    tone({ freq: 1320, dur: 0.2, type: 'square', vol: 0.08, at: 0.17 });
+  },
+  jackpotBell() {
+    for (let i = 0; i < 9; i++) {
+      tone({ freq: 2200, dur: 0.13, type: 'triangle', vol: 0.1, at: i * 0.34 });
+      tone({ freq: 3000, dur: 0.1, type: 'sine', vol: 0.06, at: i * 0.34 + 0.02 });
+    }
+  },
+  // --- carnival ---
+  midway() {
+    // three notes of a calliope, just enough to place you at a fair
+    const n = [523, 659, 784, 659, 523];
+    n.forEach((f, i) => tone({ freq: f, dur: 0.26, type: 'triangle', vol: 0.05, at: i * 0.17 }));
+  },
+  dartReady() { tone({ freq: 1500, dur: 0.04, type: 'sine', vol: 0.06 }); },
+  dartThrow() {
+    noise({ dur: 0.22, vol: 0.13, low: 500, high: 4200 });
+    tone({ freq: 900, dur: 0.2, type: 'sine', vol: 0.05, slide: 700 });
+  },
+  boardThunk() {
+    tone({ freq: 190, dur: 0.13, type: 'sine', vol: 0.26, slide: -90 });
+    noise({ dur: 0.07, vol: 0.16, low: 250, high: 1800 });
+    tone({ freq: 1400, dur: 0.05, type: 'sine', vol: 0.05 });
+  },
+  balloonPop(pitch = 1) {
+    noise({ dur: 0.04, vol: 0.55, low: 600 * pitch, high: 9000 });
+    tone({ freq: 260 * pitch, dur: 0.13, type: 'sine', vol: 0.3, slide: -170 });
+    noise({ dur: 0.16, vol: 0.06, at: 0.03, low: 200, high: 900 });
+  },
+  prizeBell() {
+    tone({ freq: 1568, dur: 0.5, type: 'triangle', vol: 0.13 });
+    tone({ freq: 2093, dur: 0.7, type: 'triangle', vol: 0.1, at: 0.1 });
+    tone({ freq: 2637, dur: 0.9, type: 'sine', vol: 0.07, at: 0.2 });
+  },
+  flutter() {
+    for (let i = 0; i < 6; i++) {
+      noise({ dur: 0.09, vol: 0.06, at: i * 0.11, low: 1400, high: 5200 });
+    }
+  },
+  // --- delivery ---
+  engineLoop() { return loopNoise({ vol: 0.045, low: 70, high: 320, wobble: 7 }); },
+  turnTick() { tone({ freq: 1100, dur: 0.025, type: 'square', vol: 0.05 }); },
+  wallBump() {
+    tone({ freq: 120, dur: 0.09, type: 'sine', vol: 0.12, slide: -50 });
+    noise({ dur: 0.05, vol: 0.07, low: 150, high: 900 });
+  },
   lever() {
     for (let i = 0; i < 7; i++) noise({ dur: 0.03, vol: 0.09, at: i * 0.035, low: 1500, high: 5000 });
     tone({ freq: 150, dur: 0.16, type: 'sawtooth', vol: 0.12, at: 0.24, slide: -60 });
@@ -100,17 +198,7 @@ export const sfx = {
     tone({ freq: 130, dur: 0.08, type: 'sine', vol: 0.12, slide: -50 });
   },
   // --- darts ---
-  whoosh() { noise({ dur: 0.16, vol: 0.1, low: 700, high: 3600 }); },
-  thunk() {
-    tone({ freq: 160, dur: 0.1, type: 'sine', vol: 0.22, slide: -70 });
-    noise({ dur: 0.05, vol: 0.12, low: 300, high: 1600 });
-  },
-  balloonPop() {
-    noise({ dur: 0.045, vol: 0.5, low: 500, high: 9000 });
-    tone({ freq: 240, dur: 0.14, type: 'sine', vol: 0.3, slide: -150 });
-  },
   // --- maze ---
-  engine() { tone({ freq: 88 + Math.random() * 14, dur: 0.14, type: 'sawtooth', vol: 0.045 }); },
   arrive() {
     tone({ freq: 520, dur: 0.14, vol: 0.12 });
     tone({ freq: 780, dur: 0.22, vol: 0.1, at: 0.12 });
