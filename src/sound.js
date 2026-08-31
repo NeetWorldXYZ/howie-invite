@@ -64,6 +64,22 @@ function noise({ dur = 0.2, vol = 0.15, at = 0, low = 400, high = 4000 }) {
 }
 
 export const sfx = {
+  scrape() { noise({ dur: 0.09, vol: 0.09, low: 900, high: 5200 }); },
+  hiss() { noise({ dur: 0.14, vol: 0.05, low: 2200, high: 7000 }); },
+  pop() {
+    noise({ dur: 0.05, vol: 0.5, low: 400, high: 8000 });
+    tone({ freq: 180, dur: 0.22, type: 'sine', vol: 0.4, slide: -110 });
+    for (let i = 0; i < 5; i++) noise({ dur: 0.1, vol: 0.06, at: 0.06 + i * 0.04, low: 1200, high: 6000 });
+  },
+  gulp() {
+    tone({ freq: 260 + Math.random() * 90, dur: 0.09, type: 'sine', vol: 0.16, slide: -70 });
+    noise({ dur: 0.06, vol: 0.05, low: 200, high: 900 });
+  },
+  burp() {
+    tone({ freq: 95, dur: 0.42, type: 'sawtooth', vol: 0.22, slide: -35 });
+    noise({ dur: 0.4, vol: 0.09, low: 120, high: 700 });
+  },
+  click() { tone({ freq: 1500, dur: 0.022, type: 'square', vol: 0.07 }); },
   tap() { tone({ freq: 1800, dur: 0.03, type: 'square', vol: 0.06 }); },
   paper() { noise({ dur: 0.18, vol: 0.08, low: 1500, high: 6000 }); },
   chime() {

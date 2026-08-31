@@ -3,44 +3,34 @@ import { useGame } from '../GameContext.jsx';
 import { DEV_MODE } from '../config.js';
 import Hud from './Hud.jsx';
 import Envelope from './Envelope.jsx';
-import Step1Clockin from './steps/Step1Clockin.jsx';
-import Step2Dough from './steps/Step2Dough.jsx';
-import Step3Makeline from './steps/Step3Makeline.jsx';
-import Step4Cash from './steps/Step4Cash.jsx';
-import Step5Help from './steps/Step5Help.jsx';
-import Step6Jake from './steps/Step6Jake.jsx';
-import Step7Close from './steps/Step7Close.jsx';
 import Finale from './Finale.jsx';
 import DevPanel from './DevPanel.jsx';
+import T1Scratch from './trials/T1Scratch.jsx';
+import T2Inflate from './trials/T2Inflate.jsx';
+import T3Chug from './trials/T3Chug.jsx';
+import T4Wheel from './trials/T4Wheel.jsx';
+import T5Sign from './trials/T5Sign.jsx';
+import T6Seal from './trials/T6Seal.jsx';
 
-const STEPS = {
-  1: Step1Clockin,
-  2: Step2Dough,
-  3: Step3Makeline,
-  4: Step4Cash,
-  5: Step5Help,
-  6: Step6Jake,
-  7: Step7Close,
-};
+const TRIAL_VIEWS = { 1: T1Scratch, 2: T2Inflate, 3: T3Chug, 4: T4Wheel, 5: T5Sign, 6: T6Seal };
 
 export default function App() {
   const { state } = useGame();
 
   let screen;
-  if (state.phase === 'envelope' || state.phase === 'invitation') {
-    screen = <Envelope />;
-  } else if (state.phase === 'finale') {
-    screen = <Finale />;
-  } else {
-    const Step = STEPS[state.step] || Step1Clockin;
-    screen = <Step key={state.step} />;
+  if (state.phase === 'envelope' || state.phase === 'invitation') screen = <Envelope />;
+  else if (state.phase === 'finale') screen = <Finale />;
+  else {
+    const View = TRIAL_VIEWS[state.trial] || T1Scratch;
+    screen = <View key={state.trial} />;
   }
 
-  const inShift = state.phase === 'shift';
+  // The chug trial leaves the whole app slightly crooked. It never recovers.
+  const tilt = state.phase === 'trials' ? state.drunk : 0;
 
   return (
-    <div className="app">
-      {inShift && <Hud />}
+    <div className={'app' + (tilt ? ` drunk-${Math.min(2, tilt)}` : '')}>
+      {state.phase === 'trials' && <Hud />}
       {screen}
       {DEV_MODE && <DevPanel />}
     </div>

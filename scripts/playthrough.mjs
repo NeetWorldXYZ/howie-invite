@@ -1,251 +1,170 @@
-// Full end-to-end playthrough against the built app (npm run build first,
-// then a preview server on :4173). Solves every puzzle for real, tests
-// refresh persistence, and confirms the finale is unreachable early.
+// End-to-end run of the initiation using REAL gestures against the built app.
+// Requires: npm run build && npx vite preview --port 4173
 import { chromium } from 'playwright';
 
 const BASE = 'http://localhost:4173/';
 let failures = 0;
-const ok = (name) => console.log(`  ok  ${name}`);
-const fail = (name, e) => { failures++; console.error(`FAIL  ${name}: ${e}`); };
+const ok = (n) => console.log(`  ok  ${n}`);
+const fail = (n, e) => { failures++; console.error(`FAIL  ${n}: ${e}`); };
 
-const browser = await chromium.launch({
-  executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium',
-});
-const ctx = await browser.newContext({
-  viewport: { width: 390, height: 844 },
-  isMobile: true,
-  hasTouch: true,
-  userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) playtest',
-});
+const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium' });
+const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 const page = await ctx.newPage();
 page.setDefaultTimeout(15000);
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
+const btn = (n) => page.getByRole('button', { name: n, exact: true });
+const box = async (sel) => (await page.locator(sel).boundingBox());
 
-const tapText = async (text, exact = false) => {
-  await page.getByText(text, { exact }).first().click();
-};
-const btn = (name, exact = true) => page.getByRole('button', { name, exact });
-
+const t0 = Date.now();
 try {
   await page.goto(BASE);
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 
-  // ---------- ENVELOPE ----------
-  await btn('OPEN INVITATION').click();
-  await btn('BEGIN SHIFT').click();
-  await page.getByText('SHIFT PROGRESS').waitFor();
-  ok('envelope -> invitation -> shift');
-
-  // ---------- STEP 1: wrong PIN then right PIN ----------
-  for (const d of ['9', '9', '9', '9']) await btn(d).click();
-  await btn('CLOCK IN').click();
-  await page.getByText('INVALID PIN').waitFor();
-  ok('step 1 rejects wrong PIN');
-  for (const d of ['1', '5', '1', '7']) await btn(d).click();
-  await btn('CLOCK IN').click();
-  await page.getByText('CLOCK IN ACCEPTED').waitFor();
-  ok('step 1 accepts 1517');
-  await page.getByText('Portion the dough.').waitFor({ timeout: 8000 });
-
-  // ---------- STEP 2: three balls, then bail ----------
-  const makeBall = async () => {
-    const tub = page.locator('.dough-tub');
-    const lcd = page.locator('.scale-lcd');
-    const read = async () => parseFloat((await lcd.innerText()).replace(/[^\d.]/g, ''));
-    // pull dough until at least ~14oz on the scale
-    for (let i = 0; i < 30 && (await read()) < 14; i++) {
-      const box = await tub.boundingBox();
-      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-      await page.mouse.down();
-      await page.waitForTimeout(180);
-      await page.mouse.up();
-      await page.waitForTimeout(80);
-    }
-    // fine-tune with pinches
-    for (let i = 0; i < 60; i++) {
-      const w = await read();
-      if (Math.abs(w - 16.0) <= 0.45) break;
-      if (w > 16.0) await btn('PINCH OFF').click();
-      else await btn('ADD PINCH').click();
-      await page.waitForTimeout(40);
-    }
-    await btn('TRAY IT').click();
-  };
-  await makeBall();
-  await page.getByText('1 / 40 COMPLETE').first().waitFor();
-  ok('step 2 first ball trayed');
-  await makeBall();
-  await makeBall();
-  await page.getByText('37 REMAINING').waitFor({ timeout: 8000 });
-  ok('step 2 reveal at 3/40');
-  await btn('FUCK THIS, I GET IT.').click();
-  await page.getByText('Build the order.').waitFor({ timeout: 10000 });
-  ok('step 2 -> step 3 via FUCK THIS');
-
-  // ---------- STEP 3: wrong build first, then correct ----------
-  await btn('SM 10"').click();
-  await btn('BBQ').click();
-  await btn('3 oz ladle').click();
-  await page.locator('.ctl-group', { hasText: 'CHEESE' }).getByRole('button', { name: '1', exact: true }).click();
-  await btn('Butter').click();
-  await btn('Pie (8)').click();
-  await btn('SEND TO OVEN').click();
-  await page.getByText('ORDER INCORRECT').waitFor();
-  ok('step 3 rejects wrong pizza');
-
-  await btn('LG 14"').click();
-  await btn('Red Sauce').click();
-  await btn('4 oz ladle').click();
-  await page.locator('.ctl-group', { hasText: 'CHEESE' }).getByRole('button', { name: '4', exact: true }).click();
-  const place = async (topping, half) => {
-    await btn(topping).click();
-    await btn(half).click();
-  };
-  await place('Pepperoni', '← LEFT HALF');
-  await place('Mushroom', '← LEFT HALF');
-  await place('Italian Sausage', 'RIGHT HALF →');
-  await place('Black Olive', 'RIGHT HALF →');
-  await place('Onion', 'RIGHT HALF →');
-  await btn('Cajun').click();
-  await btn('Square').click();
-  await btn('SEND TO OVEN').click();
-  await page.getByText('SAME ORDER × 14').waitFor({ timeout: 10000 });
-  ok('step 3 correct pizza -> ×14');
-  await page.getByText('The drawer is short.').waitFor({ timeout: 10000 });
-
-  // ---------- refresh persistence mid-shift ----------
-  await page.reload();
-  await page.getByText('The drawer is short.').waitFor();
-  const prog = await page.locator('.hud-progress').innerText();
-  if (!prog.includes('4 / 7')) throw new Error('progress lost on refresh: ' + prog);
-  ok('refresh keeps progress at step 4');
-
-  // ---------- STEP 4: wrong answer then right ----------
-  await btn('I KNOW WHAT HAPPENED').click();
-  await tapText('Marcus pocketed cash');
-  await page.getByText("DOESN'T RECONCILE").waitFor();
-  ok('step 4 rebuts wrong answer');
-  await tapText('voided and re-rung as cash');
-  await page.getByText('VARIANCE RECLASSIFIED').waitFor();
-  await page.getByText('$183.69').waitFor();
-  ok('step 4 solved, deposit shown');
-  await page.getByText("Something's wrong.").waitFor({ timeout: 10000 });
-
-  // ---------- STEP 5 ----------
-  await btn('CALL').click();
-  await page.getByText('2 HOURS 47 MINUTES').waitFor();
-  await btn('EMAIL INSTEAD').click();
-  await page.getByPlaceholder(/nobody wrote it down/).fill('Pizza123!');
-  await btn('SIGN IN').click();
-  await page.getByText('SIGN-IN FAILED').waitFor();
-  ok('step 5 rejects old password');
-  await page.getByPlaceholder(/nobody wrote it down/).fill('Crust2009!');
-  await btn('SIGN IN').click();
-  await page.getByText("You're in.").waitFor();
-  ok('step 5 accepts Crust2009!');
-  // read the alarm email (players would; also exercises the inbox)
-  await tapText('new alarm code');
-  await page.getByText('New code: 2461.').waitFor();
-  await tapText('‹ Inbox');
-  await btn('COMPOSE MESSAGE TO STORE HELP').click();
-  await page.locator('select').nth(0).selectOption('4471');
-  await page.locator('select').nth(1).selectOption('E-1067');
-  await page.locator('select').nth(2).selectOption('(734) 555-0148');
-  await btn('SEND').click();
-  await page.getByText('TICKET CREATED').first().waitFor();
-  ok('step 5 ticket created');
-  await page.getByText('JAKE MUST BE TERMINATED TONIGHT.').waitFor({ timeout: 10000 });
-
-  // ---------- STEP 6 ----------
-  await btn('OPEN THE FILE').click();
-  await btn('SELECT TERMINATION REASON').click();
-  await tapText('No-call/no-show on Saturday 8/23');
-  await page.getByText("DOCUMENTATION DOESN'T SUPPORT THIS").waitFor();
-  ok('step 6 rebuts bad reason');
-  await tapText('Unauthorized 100% comps on 8/26');
-  await page.getByText('ending your employment').waitFor();
-  ok('step 6 correct reason -> termination');
-  await page.getByText('Close the store.').waitFor({ timeout: 15000 });
-
-  // ---------- STEP 7 ----------
-  const clockOutBtn = page.getByRole('button', { name: 'Clock out', exact: false });
-  if (await clockOutBtn.isEnabled()) throw new Error('Clock out enabled before tasks done');
-  ok('step 7 clock out gated');
-
-  await tapText('Reconcile drawer');
-  await tapText('In the card batch');
-  await tapText('Verify deposit');
-  await page.getByPlaceholder('0.00').fill('183.69');
-  await btn('SEAL THE BAG').click();
-  await tapText('Record waste');
-  // one failed makeline attempt earlier -> waste = 1
-  await page.getByPlaceholder('0', true).fill('1');
-  await btn('LOG IT').click();
-  await tapText('Confirm labor');
-  await btn('APPROVE LABOR').click();
-  await tapText('Secure makeline');
-  for (const b of ['SAUCE', 'CHEESE', 'PEP', 'SAUSAGE', 'VEG', 'THE MYSTERY BIN']) {
-    await btn(b).click();
+  // ---------- OPENING: drag to tear ----------
+  await page.getByText('You are the lucky one.').waitFor();
+  const env = await box('.envelope');
+  await page.mouse.move(env.x + 14, env.y + env.height / 2);
+  await page.mouse.down();
+  for (let i = 1; i <= 24; i++) {
+    await page.mouse.move(env.x + 14 + (env.width * 0.78 * i) / 24, env.y + env.height / 2);
+    await page.waitForTimeout(12);
   }
-  await btn('WALK-IN, WRAPPED, DATED').click();
-  await tapText('Verify dough count');
-  await page.getByPlaceholder('balls / tray').fill('40');
-  await page.getByPlaceholder('oz each').fill('16.0');
-  await btn('CONFIRM').click();
-  await tapText('Set alarm');
-  for (const d of ['2', '4', '6', '1']) await btn(d).click();
-  await btn('ARM — AWAY').click();
-  await tapText('Lock doors');
-  await tapText('FRONT DOOR — lock it');
-  await tapText('PROPPED OPEN');
-  await tapText('BACK DOOR — lock it');
-  await btn('DOORS SECURED').click();
-  ok('step 7 all eight tasks complete');
+  await page.mouse.up();
+  await page.getByText('Official Invitation').waitFor({ timeout: 8000 });
+  ok('opening: dragging tears the envelope open');
+  await btn('BEGIN INITIATION').click();
+  await page.getByText('INITIATION').first().waitFor();
+  ok('invitation -> trials');
 
-  await clockOutBtn.click();
-  await page.getByText('MANAGER CANNOT CLOCK OUT WITH ACTIVE EMPLOYEE.').waitFor();
-  ok('step 7 clock-out blocked by Jake');
-  await btn('OPEN LABOR SCREEN').click();
-  await btn('END SHIFT — J. RENNER').click();
-  for (const d of ['1', '5', '1', '7']) await btn(d).click();
-  await btn('OVERRIDE').click();
-  await page.getByText('SHIFT ENDED 12:06 AM').waitFor();
-  ok('step 7 Jake clocked out with manager PIN');
-  await clockOutBtn.click();
-  await page.getByText('CLOCK OUT ACCEPTED').waitFor();
-  ok('step 7 clock out accepted');
+  // ---------- TRIAL 1: scratch ----------
+  const cv = await box('.scratch-canvas');
+  for (let row = 0; row < 7; row++) {
+    const y = cv.y + 12 + (cv.height - 24) * (row / 6);
+    await page.mouse.move(cv.x + 6, y);
+    await page.mouse.down();
+    for (let i = 1; i <= 12; i++) {
+      await page.mouse.move(cv.x + 6 + ((cv.width - 12) * i) / 12, y);
+    }
+    await page.mouse.up();
+  }
+  await page.getByText('THREE MATCHING. YOU WIN.').waitFor({ timeout: 8000 });
+  ok('trial 1: scratching the foil reveals the win');
+  await btn('CONTINUE').click();
+
+  // ---------- TRIAL 2: press and hold to pop ----------
+  await page.getByText("THE COMMISSIONER'S EGO").waitFor();
+  const stage = await box('.inflate-stage');
+  await page.mouse.move(stage.x + stage.width / 2, stage.y + stage.height / 2);
+  await page.mouse.down();
+  await page.getByText('EGO RUPTURED').waitFor({ timeout: 15000 });
+  await page.mouse.up();
+  ok('trial 2: holding inflates until it pops');
+  await btn('PICK UP THE SLIP').click();
+
+  // ---------- TRIAL 3: mash to chug ----------
+  await page.getByText('DRAFT NIGHT').first().waitFor();
+  const glass = await box('.chug-stage');
+  for (let i = 0; i < 160; i++) {
+    await page.mouse.click(glass.x + glass.width / 2, glass.y + glass.height / 2, { delay: 3 });
+    if (i % 6 === 0 && await page.getByText('Two down.').isVisible().catch(() => false)) break;
+    // the between-beers beat ignores taps; wait it out rather than wasting them
+    if (await page.getByText('ANOTHER.').isVisible().catch(() => false)) await page.waitForTimeout(1800);
+    await page.waitForTimeout(12);
+  }
+  await page.getByText('Two down.').waitFor({ timeout: 10000 });
+  ok('trial 3: mashing drinks both beers');
+  const tilted = await page.locator('.app.drunk-2').count();
+  if (tilted !== 1) throw new Error('drunk tilt not applied after chugging');
+  ok('trial 3: the app is now visibly crooked');
+  await btn('STAND UP SLOWLY').click();
+
+  // ---------- TRIAL 4: flick the wheel, twice ----------
+  await page.getByText('LAST PLACE PUNISHMENT').waitFor();
+  const flick = async () => {
+    const w = await box('.wheel');
+    const cx = w.x + w.width / 2, cy = w.y + w.height / 2;
+    await page.mouse.move(cx, cy - w.height * 0.34);
+    await page.mouse.down();
+    for (let i = 1; i <= 8; i++) {
+      const a = -Math.PI / 2 + (i / 8) * 1.5;
+      await page.mouse.move(cx + Math.cos(a) * w.width * 0.34, cy + Math.sin(a) * w.height * 0.34);
+    }
+    await page.mouse.up();
+  };
+  await flick();
+  await page.getByText('Spin recorded.').waitFor({ timeout: 15000 });
+  ok('trial 4: flicking spins the wheel to a result');
+  await btn('SPIN AGAIN (NOT OPTIONAL)').click();
+  await page.locator('.verdict.locked').waitFor({ timeout: 20000 });
+  ok('trial 4: the forced re-spin locks in a punishment');
+  await btn('ACCEPT MY FATE').click();
+
+  // ---------- TRIAL 5: draw a signature ----------
+  await page.getByText('LEAGUE COVENANT').waitFor();
+  if (await btn('EXECUTE AGREEMENT').isVisible().catch(() => false)) throw new Error('could execute without signing');
+  ok('trial 5: cannot execute before signing');
+  const pad = await box('.sign-pad');
+  await page.mouse.move(pad.x + 20, pad.y + pad.height / 2);
+  await page.mouse.down();
+  for (let i = 1; i <= 40; i++) {
+    const x = pad.x + 20 + ((pad.width - 40) * i) / 40;
+    const y = pad.y + pad.height / 2 + Math.sin(i / 2.2) * 26;
+    await page.mouse.move(x, y);
+  }
+  await page.mouse.up();
+  await btn('EXECUTE AGREEMENT').click();
+  await page.getByText('SIGNATURE ACCEPTED').waitFor();
+  await page.getByText(/Dues are \$50/).waitFor();
+  ok('trial 5: terms are only readable after signing');
+  await btn('I HAVE MADE A HUGE MISTAKE').click();
+
+  // ---------- TRIAL 6: press and hold to stamp ----------
+  await page.getByText('SEAL YOUR ENTRY').waitFor();
+  const wax = await box('.wax');
+  await page.mouse.move(wax.x + wax.width / 2, wax.y + wax.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(2100);
+  await page.mouse.up();
+  ok('trial 6: holding stamps the seal');
 
   // ---------- FINALE ----------
-  await page.getByText('SHIFT COMPLETE', { exact: false }).first().waitFor({ timeout: 10000 });
+  await page.getByText('Initiation Complete').waitFor({ timeout: 10000 });
   await page.getByText('THE HUNGRY HOMIES').waitFor();
   ok('finale: welcome card');
-  await btn('VIEW SHIFT PERFORMANCE').click();
-  await page.getByText('PIZZAS FUCKED UP').waitFor();
+  await btn('VIEW YOUR RECORD').click();
+  await page.getByText('INITIATION RECORD').waitFor();
+  await page.getByText('EGO INFLATED TO').waitFor();
   await page.getByText('ACCEPT LEAGUE INVITATION').waitFor();
-  ok('finale: shift report + invite button');
+  ok('finale: record + invite button');
 
-  // finale survives refresh
+  // real punishment text landed on the record
+  const rec = await page.locator('.shift-report').innerText();
+  if (!/TRAMP|WAFFLE|MILK|SUSHI|MOM|SHAVE|PORTRAITS|JERSEY/.test(rec)) {
+    throw new Error('no punishment recorded on the report');
+  }
+  ok('finale: the punishment they actually spun is on the record');
+
+  // ---------- persistence + gating ----------
   await page.reload();
-  await page.getByText('SHIFT COMPLETE', { exact: false }).first().waitFor();
-  ok('finale persists across refresh');
+  await page.getByText('Initiation Complete').waitFor();
+  ok('finale survives refresh');
 
-  // ---------- fresh visitor cannot reach finale ----------
-  const page2 = await ctx.browser().newContext({ viewport: { width: 390, height: 844 } }).then((c) => c.newPage());
-  await page2.goto(BASE);
-  const sawEnvelope = await page2.getByText('YOU HAVE BEEN CHOSEN', { exact: false }).first().isVisible().catch(() => false);
-  const sawFinale = await page2.getByText('SHIFT COMPLETE').first().isVisible().catch(() => false);
-  if (sawEnvelope && !sawFinale) ok('fresh session starts at the envelope, not the finale');
-  else fail('fresh session gating', `envelope=${sawEnvelope} finale=${sawFinale}`);
-  await page2.close();
+  const p2 = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+  await p2.goto(BASE);
+  const fresh = await p2.getByText('You are the lucky one.').isVisible().catch(() => false);
+  const leaked = await p2.getByText('Initiation Complete').isVisible().catch(() => false);
+  if (fresh && !leaked) ok('a fresh visitor starts at the envelope, not the finale');
+  else fail('gating', `fresh=${fresh} leaked=${leaked}`);
+  await p2.close();
 
   if (errors.length) fail('no page errors', errors.join(' | '));
-  else ok('no uncaught page errors during full playthrough');
+  else ok('no uncaught page errors');
+  console.log(`\n  scripted run took ${((Date.now() - t0) / 1000).toFixed(0)}s of machine time`);
 } catch (e) {
   fail('playthrough', e.message);
   await page.screenshot({ path: 'scripts/failure.png', fullPage: true }).catch(() => {});
-  console.error(await page.content().then((c) => c.slice(0, 800)).catch(() => ''));
 }
 
 await browser.close();

@@ -1,32 +1,23 @@
 import React, { useState } from 'react';
 import { useGame } from '../GameContext.jsx';
 import { sfx } from '../sound.js';
-import Binder from './Binder.jsx';
+import { TRIALS } from '../data/trials.js';
 
 export default function Hud() {
   const { state, dispatch, reset } = useGame();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [binderOpen, setBinderOpen] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
-
-  const anyBinder = Object.values(state.binder).some(Boolean);
 
   return (
     <>
       <div className="hud">
         <div className="hud-progress">
-          SHIFT PROGRESS<br /><b>{state.step} / 7</b>
+          INITIATION<br /><b>{state.trial} / {TRIALS.length}</b>
         </div>
         <div className="hud-actions">
-          {anyBinder && (
-            <button className="hud-btn" onClick={() => { sfx.paper(); setBinderOpen(true); }}>
-              BINDER
-            </button>
-          )}
           <button
             className="hud-btn"
             onClick={() => { dispatch({ type: 'MUTE', muted: !state.muted }); if (state.muted) sfx.tap(); }}
-            aria-label="Toggle sound"
           >
             {state.muted ? 'MUTED' : 'SOUND'}
           </button>
@@ -38,22 +29,20 @@ export default function Hud() {
         <div className="hud-menu" onClick={() => setMenuOpen(false)}>
           {!confirmReset ? (
             <button className="danger" onClick={(e) => { e.stopPropagation(); setConfirmReset(true); }}>
-              Reset shift
+              Start over
             </button>
           ) : (
             <>
               <button className="danger" onClick={() => { reset(); setConfirmReset(false); }}>
-                Yes — start over from nothing
+                Yes, start over
               </button>
               <button onClick={(e) => { e.stopPropagation(); setConfirmReset(false); setMenuOpen(false); }}>
-                No, keep my shift
+                No
               </button>
             </>
           )}
         </div>
       )}
-
-      <Binder open={binderOpen} onClose={() => setBinderOpen(false)} />
     </>
   );
 }

@@ -1,95 +1,62 @@
 // ============================================================
-// FINAL SHIFT REPORT — grading logic
+// FINAL DEGENERACY REPORT
 // ============================================================
 
 export function formatDuration(ms) {
   const total = Math.max(0, Math.round(ms / 1000));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
+  const m = Math.floor(total / 60);
   const s = total % 60;
-  const mm = String(m).padStart(2, '0');
-  const ss = String(s).padStart(2, '0');
-  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  return `${m}:${String(s).padStart(2, '0')}`;
 }
 
 export function buildReport(stats, elapsedMs) {
-  const hints = stats.hintsUsed || 0;
-  const doughAcc = stats.doughAccuracy != null ? Math.round(stats.doughAccuracy) : 100;
-  const pizzasFucked = Math.max(0, (stats.makelineAttempts || 1) - 1);
-  const wrongJake = stats.jakeWrongPicks || 0;
-  const wrongCash = Math.max(0, (stats.cashAttempts || 1) - 1);
-  const clockinTries = stats.clockinAttempts || 1;
-  const closingMisses = stats.closingMistakes || 0;
-  const saidFuckThis = stats.doughChoice === 'fuck_this';
+  const psi = Math.round(stats.maxPsi || 0);
+  const punishment = (stats.punishment || '—').replace(/\n/g, ' ');
+  const scratch = Math.round((stats.scratchPct || 0) * 100);
+  const ink = Math.round(stats.signatureInk || 0);
 
-  // ---- HR liability ----
-  let hr = 0;
-  if (saidFuckThis) hr += 2;
-  hr += wrongJake; // every unsupported termination reason is a lawsuit rehearsal
-  const hrLabel = hr <= 1 ? 'LOW' : hr <= 3 ? 'MODERATE' : 'CONCERNING';
+  // Signature verdict — comedy from the handwriting analysis
+  const sigVerdict =
+    ink > 1600 ? 'ELABORATE. YOU HAVE PRACTICED THIS.' :
+    ink > 800 ? 'LEGALLY BINDING ENOUGH.' :
+    ink > 400 ? 'A LINE. TECHNICALLY A SIGNATURE.' :
+    'BARELY A GESTURE. UPHELD ANYWAY.';
 
-  // ---- score (0–100) ----
-  let score = 100;
-  score -= hints * 6;
-  score -= Math.max(0, clockinTries - 1) * 2;
-  score -= pizzasFucked * 5;
-  score -= wrongCash * 5;
-  score -= wrongJake * 6;
-  score -= closingMisses * 2;
-  score -= Math.max(0, 100 - doughAcc) * 0.2;
-  const minutes = elapsedMs / 60000;
-  if (minutes > 35) score -= Math.min(10, (minutes - 35) * 0.5);
-  score = Math.max(0, Math.round(score));
+  const speed = elapsedMs / 60000;
+  const paceNote =
+    speed < 3 ? 'Completed alarmingly fast. You had nothing else going on.' :
+    speed < 7 ? 'Reasonable pace for a man with obligations he is ignoring.' :
+    'Took your time. Somebody interrupted you. Probably your wife.';
 
-  const grade =
-    score >= 92 ? 'A' :
-    score >= 84 ? 'A−' :
-    score >= 76 ? 'B' :
-    score >= 66 ? 'C+' :
-    score >= 55 ? 'C' :
-    score >= 42 ? 'D' : 'F (HIRED ANYWAY — WE\'RE SHORT-STAFFED)';
+  // Degeneracy score — higher is worse, which is better
+  let score = 0;
+  score += Math.min(40, psi);              // overinflating the ego
+  score += scratch >= 92 ? 20 : scratch >= 75 ? 12 : 6;
+  score += Math.min(20, ink / 90);
+  score += (stats.beers || 0) * 6;
+  score += stats.popped ? 10 : 0;
+  score = Math.min(100, Math.round(score));
 
-  // ---- management potential ----
-  let potential;
-  if (score >= 90 && !saidFuckThis) {
-    potential = 'ALARMINGLY HIGH. PLEASE HAVE A HOBBY.';
-  } else if (score >= 84) {
-    potential = 'PROMOTABLE. UNFORTUNATELY.';
-  } else if (score >= 70 && saidFuckThis) {
-    potential = 'STRONG INSTINCTS, ZERO PATIENCE. SO... MANAGER.';
-  } else if (score >= 70) {
-    potential = 'ADEQUATE. WOULD SURVIVE A FRIDAY.';
-  } else if (wrongJake >= 3) {
-    potential = 'DO NOT LET THIS PERSON NEAR HR PAPERWORK AGAIN.';
-  } else if (score >= 50) {
-    potential = 'NEEDS SUPERVISION. IS THE SUPERVISOR.';
-  } else {
-    potential = 'KEYS REVOKED PENDING REVIEW.';
-  }
+  const rating =
+    score >= 88 ? 'FULLY DEGENERATE' :
+    score >= 72 ? 'LEAGUE READY' :
+    score >= 55 ? 'PROMISING' :
+    score >= 38 ? 'SUSPICIOUSLY WELL-ADJUSTED' :
+    'ARE YOU OKAY';
+
+  const verdict =
+    score >= 88 ? 'Admitted without discussion.' :
+    score >= 72 ? 'Admitted. Standard hazing applies.' :
+    score >= 55 ? 'Admitted on a provisional basis nobody will remember.' :
+    score >= 38 ? 'Admitted. The committee has notes.' :
+    'Admitted, because we needed a twelfth.';
 
   const remarks = [];
-  if (pizzasFucked === 0) remarks.push('Zero remakes on the makeline. Randy never knew how close he came.');
-  if (pizzasFucked >= 3) remarks.push(`Randy received ${pizzasFucked} apologies and one correct pizza.`);
-  if (saidFuckThis) remarks.push('Verbatim quote from dough prep recorded in your permanent file.');
-  if (stats.doughChoice === 'keep_going') remarks.push('Voluntarily portioned additional dough. Dennis has never trusted anyone more.');
-  if (hints === 0) remarks.push('Completed shift without assistance. Store Help remains unaware you exist.');
-  if (hints >= 4) remarks.push(`Requested help ${hints} times. The laminated sheets were right there.`);
-  if (wrongJake === 0 && stats.step6Done) remarks.push('Terminated an employee correctly on the first attempt. HR wept.');
-  if (wrongCash === 0 && stats.step4Done) remarks.push('Found $37.84 faster than three district managers and one auditor.');
+  if (psi >= 41) remarks.push(`Inflated the Commissioner's ego to ${psi} PSI before rupture. Deflategate was ${(psi / 12.5).toFixed(1)}× less severe.`);
+  if (scratch >= 96) remarks.push('Scratched the entire ticket. Every last bit of it. We watched.');
+  if (scratch < 75) remarks.push('Left foil on the ticket. A quitter, but an efficient one.');
+  if (ink < 400) remarks.push('Signature is a single line. Our lawyer says it counts. Our lawyer is Dustin.');
+  if (speed < 3) remarks.push(paceNote);
 
-  return {
-    time: formatDuration(elapsedMs),
-    hints,
-    doughAcc,
-    pizzasFucked,
-    hrLabel,
-    potential,
-    score,
-    grade,
-    remarks,
-    clockinTries,
-    wrongCash,
-    wrongJake,
-    closingMisses,
-  };
+  return { time: formatDuration(elapsedMs), psi, punishment, scratch, sigVerdict, score, rating, verdict, remarks, beers: stats.beers || 0 };
 }
