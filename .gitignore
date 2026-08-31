@@ -1,4 +1,5 @@
 node_modules/
+dist/single.html
 dist/
 scripts/shots/
 scripts/failure.png
