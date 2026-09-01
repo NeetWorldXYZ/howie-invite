@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useGame } from '../../GameContext.jsx';
 import { CLOCKOUT, KEY } from '../../data/trials.js';
 import { Overlay } from '../common.jsx';
+import { HowDareYou } from '../art.jsx';
 import { sfx } from '../../sound.js';
 
 // Punch out with the pin off the scrap, then the phone rings.
@@ -178,7 +179,7 @@ export default function T6ClockOut() {
   if (phase === 'getout') {
     return (
       <div className="getout-scene">
-        <div className="getout-big">{CLOCKOUT.getOut.big}</div>
+        <HowDareYou />
         <div className="getout-sub">{CLOCKOUT.getOut.sub}</div>
         <div className="getout-actions">
           <button className="btn primary block" onClick={callBack}>{CLOCKOUT.getOut.callBack}</button>

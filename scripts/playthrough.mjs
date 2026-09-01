@@ -298,8 +298,9 @@ try {
   // the lazy-bones branch first
   await btn('NO, SORRY, I AM A LAZY BONES').click();
   await page.locator('.getout-scene').waitFor();
-  await page.getByText('GET OUT').waitFor();
-  ok('trial 6: saying no gets you thrown out');
+  await page.getByText('HOW DARE YOU').waitFor();
+  if (await page.locator('.hdy-frame').count() !== 1) throw new Error('no reaction shot');
+  ok('trial 6: saying no gets you the reaction shot');
   await btn('CALL HIM BACK').click();
   await page.getByText('CALLING DENNIS…').waitFor();
   await page.getByText('Please forgive me', { exact: false }).waitFor({ timeout: 15000 });

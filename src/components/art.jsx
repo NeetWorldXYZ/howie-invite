@@ -116,17 +116,110 @@ export function Dart({ length = 42 }) {
 
 // Howie at the gates.
 //
-// STAND-IN. To use the real artwork instead: drop the file at
-// src/assets/howie-jesus.png, import it here, and replace this whole
-// <figure> body with a single <img className="hj-real" src={...} />.
-export function HowieJesus({ width = 260 }) {
+// Drawn here rather than shipped as a photo. To use real artwork instead:
+// drop it at src/assets/howie-jesus.png, import it, and replace the whole
+// <figure> body with <img className="hj-real" src={jesusUrl} alt="" />.
+export function HowieJesus({ width = 300 }) {
   return (
     <figure className="hj" style={{ width }}>
-      <span className="hj-rays" />
-      <span className="hj-gate l" />
-      <span className="hj-gate r" />
+      <svg viewBox="0 0 400 560" className="hj-svg" aria-label="Howie at the gates">
+        <defs>
+          <radialGradient id="hjGlow" cx="50%" cy="30%" r="62%">
+            <stop offset="0%" stopColor="#fff8e2" />
+            <stop offset="45%" stopColor="#ffeab4" />
+            <stop offset="100%" stopColor="#f0d894" stopOpacity="0" />
+          </radialGradient>
+          <linearGradient id="hjRobe" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#fffaf0" />
+            <stop offset="55%" stopColor="#f6ecd2" />
+            <stop offset="100%" stopColor="#e6d5ab" />
+          </linearGradient>
+          <linearGradient id="hjSash" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#d4392c" />
+            <stop offset="100%" stopColor="#8e1a12" />
+          </linearGradient>
+          <linearGradient id="hjGate" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#f2e2ab" />
+            <stop offset="100%" stopColor="#c9a227" />
+          </linearGradient>
+        </defs>
+
+        {/* light behind everything */}
+        <circle cx="200" cy="185" r="215" fill="url(#hjGlow)" />
+
+        {/* pearly gates */}
+        {[0, 1].map((side) => {
+          const x = side ? 262 : 32;
+          return (
+            <g key={side} opacity="0.85">
+              <path
+                d={`M${x} 470 L${x} 150 Q${x + 53} 78 ${x + 106} 150 L${x + 106} 470 Z`}
+                fill="rgba(255,252,240,0.5)" stroke="url(#hjGate)" strokeWidth="4"
+              />
+              {[0, 1, 2, 3].map((i) => (
+                <line key={i}
+                  x1={x + 18 + i * 24} y1={470} x2={x + 18 + i * 24} y2={168}
+                  stroke="url(#hjGate)" strokeWidth="2.4" opacity="0.75" />
+              ))}
+              <circle cx={x + 53} cy={200} r="15" fill="none" stroke="url(#hjGate)" strokeWidth="2.4" opacity="0.8" />
+            </g>
+          );
+        })}
+
+        {/* steps up the middle */}
+        {[0, 1, 2, 3].map((i) => (
+          <rect key={i} x={150 - i * 16} y={392 + i * 20} width={100 + i * 32} height="14"
+            rx="3" fill="#fffdf6" opacity={0.5 + i * 0.1} />
+        ))}
+
+        {/* robe */}
+        <path d="M200 176 L246 196 Q286 300 292 468 L108 468 Q114 300 154 196 Z" fill="url(#hjRobe)" />
+        {[168, 186, 204, 222].map((x, i) => (
+          <path key={i} d={`M${x + 8} 214 Q${x + 2} 340 ${x - 6} 466`}
+            stroke="rgba(180,152,86,0.35)" strokeWidth="2" fill="none" />
+        ))}
+        {/* sash */}
+        <path d="M232 190 L258 202 L176 468 L136 468 Z" fill="url(#hjSash)" />
+        {/* rope belt */}
+        <path d="M132 372 Q200 392 268 372" stroke="#c9a227" strokeWidth="6" fill="none" strokeLinecap="round" />
+
+        {/* arms, open */}
+        <path d="M154 208 Q96 236 58 292 L86 314 Q126 262 168 240 Z" fill="url(#hjRobe)" />
+        <path d="M246 208 Q304 236 342 292 L314 314 Q274 262 232 240 Z" fill="url(#hjRobe)" />
+        <ellipse cx="66" cy="312" rx="21" ry="17" fill="#f2cba6" transform="rotate(-24 66 312)" />
+        <ellipse cx="334" cy="312" rx="21" ry="17" fill="#f2cba6" transform="rotate(24 334 312)" />
+
+        {/* sandals */}
+        <ellipse cx="168" cy="474" rx="24" ry="9" fill="#8a5a2a" />
+        <ellipse cx="232" cy="474" rx="24" ry="9" fill="#8a5a2a" />
+
+        {/* clouds along the floor */}
+        <g fill="#ffffff" opacity="0.96">
+          <circle cx="46" cy="486" r="42" /><circle cx="112" cy="500" r="50" />
+          <circle cx="196" cy="492" r="44" /><circle cx="286" cy="502" r="52" />
+          <circle cx="358" cy="488" r="44" />
+          <rect x="0" y="496" width="400" height="64" />
+        </g>
+      </svg>
+
       <span className="hj-halo" />
       <img className="hj-head" src={headUrl} alt="" draggable={false} />
     </figure>
+  );
+}
+
+// The reaction shot. A grainy, pushed-in black and white close-up with
+// the caption burned in, the way the gif it stands in for looks.
+export function HowDareYou() {
+  return (
+    <div className="hdy">
+      <div className="hdy-frame">
+        <img className="hdy-face" src={headUrl} alt="" draggable={false} />
+        <span className="hdy-grain" />
+        <span className="hdy-bar top" />
+        <span className="hdy-bar bottom" />
+        <span className="hdy-caption">HOW DARE YOU</span>
+      </div>
+    </div>
   );
 }

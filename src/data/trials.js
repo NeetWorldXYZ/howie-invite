@@ -193,8 +193,7 @@ export const CLOCKOUT = {
   },
 
   getOut: {
-    big: 'GET OUT',
-    sub: 'The Commissioner has reviewed your answer.',
+    sub: 'Dennis has hung up. The Commissioner was cc\'d.',
     callBack: 'CALL HIM BACK',
     startOver: 'START THE WHOLE THING OVER',
   },
