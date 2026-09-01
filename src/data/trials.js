@@ -125,6 +125,26 @@ export const MAZE = {
     '###########',
   ],
   order: { num: '#4471', items: '2 LG PEP · 1 HOWIE BREAD', addr: '2216 TELEGRAPH RD' },
+
+  // The intro: mash to get the order boxed and into the bag before it
+  // goes cold. Tuned to demand roughly four taps a second, sustained.
+  load: {
+    title: 'OUT OF THE OVEN',
+    sub: 'TAP TO BOX IT AND LOAD THE BAG',
+    seconds: 15,
+    need: 100,
+    perTap: 2.9,
+    decay: 5,          // units lost per second — stopping loses ground
+    hint: 'TAP FAST. IT IS ALREADY COOLING.',
+    success: 'IN THE BAG. GO.',
+    fails: [
+      'Cold. Dennis remade it. Try again.',
+      'Cold again. He remade it again. He did not say anything, which is worse.',
+      'The customer has called the store. Maria took it. Go.',
+      'Dennis is now watching you do this.',
+    ],
+    retry: 'REMAKE IT',
+  },
   promise: '30 MINUTES OR LESS',
   lateNote: 'It has been longer than thirty minutes. Nobody is timing you. The pizza knows.',
   arrive: 'You found the house. No porch light, obviously.',

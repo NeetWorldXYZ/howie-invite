@@ -20,8 +20,108 @@ const find = (ch) => {
 // Steering, not dragging. The car drives itself; you swipe a direction and
 // it takes that turn at the next junction where it is available. The camera
 // follows, so the map never has to fit on screen.
+// The scramble that comes before the drive: box the order and get it in
+// the bag inside fifteen seconds, against a meter that keeps draining.
+function LoadOut({ onDone }) {
+  const L = MAZE.load;
+  const [filled, setFilled] = useState(0);
+  const [left, setLeft] = useState(L.seconds);
+  const [state, setState] = useState('ready'); // ready | going | won | lost
+  const [fails, setFails] = useState(0);
+  const raf = useRef(0);
+  const start = useRef(0);
+  const val = useRef(0);
+  const tickAt = useRef(0);
+
+  useEffect(() => () => cancelAnimationFrame(raf.current), []);
+
+  const won = useRef(false);
+  const win = () => {
+    if (won.current) return;
+    won.current = true;
+    cancelAnimationFrame(raf.current);
+    setState('won');
+    sfx.chime();
+    setTimeout(onDone, 900);
+  };
+
+  const run = () => {
+    setState('going');
+    val.current = 0;
+    start.current = performance.now();
+    const step = (now) => {
+      const elapsed = (now - start.current) / 1000;
+      const remain = Math.max(0, L.seconds - elapsed);
+      setLeft(remain);
+      // Check BEFORE draining. Draining first meant the meter was always
+      // a fraction under the target at the moment it was tested, so the
+      // challenge could never actually be won.
+      if (val.current >= L.need) { win(); return; }
+      val.current = Math.max(0, val.current - L.decay * (1 / 60));
+      setFilled(val.current);
+      if (remain <= 5 && now - tickAt.current > 1000) { tickAt.current = now; sfx.beep(); }
+      if (remain <= 0) {
+        setState('lost'); sfx.deny();
+        setFails((f) => f + 1);
+        return;
+      }
+      raf.current = requestAnimationFrame(step);
+    };
+    raf.current = requestAnimationFrame(step);
+  };
+
+  const tap = () => {
+    if (state === 'ready') { run(); }
+    if (state !== 'going' && state !== 'ready') return;
+    val.current = Math.min(L.need, val.current + L.perTap);
+    setFilled(val.current);
+    sfx.slap();
+    if (val.current >= L.need) win();
+  };
+
+  const pct = Math.min(100, (filled / L.need) * 100);
+  const boxes = Math.min(6, Math.floor((filled / L.need) * 6 + 0.001));
+  const urgent = state === 'going' && left <= 5;
+
+  return (
+    <div className="trial loadout">
+      <header className="trial-head">
+        <div className="trial-kicker">{L.title}</div>
+        <h2 className="trial-title">
+          {state === 'won' ? L.success : state === 'lost' ? L.fails[Math.min(fails - 1, L.fails.length - 1)] : L.sub}
+        </h2>
+      </header>
+
+      <div className={'lo-clock' + (urgent ? ' urgent' : '')}>
+        {left.toFixed(2)}<small>S</small>
+      </div>
+
+      <div className="lo-meter">
+        <div className="lo-meter-fill" style={{ width: `${pct}%` }} />
+      </div>
+
+      <div className="lo-stage" onPointerDown={tap}>
+        <div className="lo-bag">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <span key={i} className={'lo-box' + (i < boxes ? ' in' : '')} style={{ '--i': i }} />
+          ))}
+          <span className="lo-bag-front">HOT BAG</span>
+        </div>
+        {state === 'ready' && <div className="drive-cue">{L.hint}</div>}
+      </div>
+
+      {state === 'lost' && (
+        <button className="btn primary block" onClick={() => { won.current = false; setState('ready'); setFilled(0); setLeft(L.seconds); val.current = 0; sfx.tap(); }}>
+          {L.retry}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function T4Maze() {
   const { advance } = useGame();
+  const [loaded, setLoaded] = useState(false);
   const start = find('S');
   const house = find('H');
 
@@ -42,10 +142,10 @@ export default function T4Maze() {
   const [moving, setMoving] = useState(false);
 
   useEffect(() => {
-    if (arrived) return;
+    if (arrived || !loaded) return;
     const id = setInterval(() => setElapsed((e) => e + 1), 1000);
     return () => clearInterval(id);
-  }, [arrived]);
+  }, [arrived, loaded]);
 
   useEffect(() => () => {
     cancelAnimationFrame(raf.current);
@@ -54,6 +154,7 @@ export default function T4Maze() {
 
   // ---- the drive loop ----
   useEffect(() => {
+    if (!loaded) return undefined;
     const tick = (now) => {
       const dt = Math.min(0.05, (now - (last.current || now)) / 1000);
       last.current = now;
@@ -108,7 +209,7 @@ export default function T4Maze() {
     raf.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [arrived]);
+  }, [arrived, loaded]);
 
   const pushTrail = (c) => {
     const t = trailRef.current;
@@ -166,6 +267,8 @@ export default function T4Maze() {
   // compass to the customer
   const toHouse = Math.atan2((house.r + 0.5) - c.y, (house.c + 0.5) - c.x) * (180 / Math.PI) + 90;
   const dist = Math.hypot((house.c + 0.5) - c.x, (house.r + 0.5) - c.y);
+
+  if (!loaded) return <LoadOut onDone={() => setLoaded(true)} />;
 
   const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
   const ss = String(elapsed % 60).padStart(2, '0');

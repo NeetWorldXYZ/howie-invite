@@ -209,6 +209,27 @@ try {
   await btn('ALL HAIL THE DOUGH CHAMPS').click();
 
   // ---------- TRIAL 4: DELIVERY ----------
+  // intro: box the order and load the bag inside fifteen seconds
+  await page.locator('.loadout').waitFor();
+  await page.getByText('OUT OF THE OVEN').waitFor();
+  if (await page.locator('.drive-view').count() !== 0) throw new Error('the drive is reachable without loading the bag');
+  ok('trial 4: the load-out gates the drive');
+  const loOverflow = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
+  if (loOverflow > 4) throw new Error(`load-out overflows the screen by ${loOverflow}px`);
+  ok('trial 4: the load-out fits on screen');
+
+  const lo = await box('.lo-stage');
+  const lox = lo.x + lo.width / 2, loy = lo.y + lo.height / 2;
+  const loStart = Date.now();
+  let loTaps = 0;
+  while (Date.now() - loStart < 16000) {
+    await page.mouse.click(lox, loy);
+    loTaps++;
+    if (loTaps % 4 === 0 && await page.locator('.drive-view').count()) break;
+  }
+  await page.locator('.drive-view').waitFor({ timeout: 5000 });
+  ok(`trial 4: mashing loads the bag in time (${loTaps} taps)`);
+
   await page.locator('.run-hud').waitFor();
   await page.getByText('ORDER #4471').waitFor();
   ok('trial 4: delivery order slip is present');
