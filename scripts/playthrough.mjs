@@ -198,20 +198,25 @@ try {
   ok('trial 3: the note names the dough champs');
   await btn('ALL HAIL THE DOUGH CHAMPS').click();
 
-  // ---------- TRIAL 4: MAZE ----------
-  // the maze header is the driver's order slip, not a title
+  // ---------- TRIAL 4: DELIVERY ----------
   await page.locator('.run-hud').waitFor();
   await page.getByText('ORDER #4471').waitFor();
-  const bd = await box('.maze-board');
-  // BFS the grid, then drag the car cell by cell along the path
-  const grid = await page.evaluate(() => window.__MAZE__);
-  const G = grid || [
-    '###########','#S#.....#.#','#.###.#.#.#','#...#.#...#','###.#.###.#',
-    '#...#.#...#','#.###.#.###','#.....#...#','#########.#','#...#...#.#',
-    '#.#.#.#.#.#','#.#...#.#.#','#.#####.#.#','#.#...#...#','#.#.#.#####',
-    '#...#....H#','###########'];
+  ok('trial 4: delivery order slip is present');
+
+  // the whole trial has to fit — the old board ran off the bottom and
+  // could not be scrolled to, because steering needs touch-action:none
+  const mazeOverflow = await page.evaluate(() =>
+    document.documentElement.scrollHeight - window.innerHeight);
+  if (mazeOverflow > 4) throw new Error(`delivery trial overflows the screen by ${mazeOverflow}px`);
+  ok('trial 4: fits on screen with nothing below the fold');
+
+  // BFS the maze, convert the route to a list of turns, swipe them
+  const G = ['###########','#S#.....#.#','#.###.#.#.#','#...#.#...#','###.#.###.#',
+             '#...#.#...#','#.###.#.###','#.....#...#','#########.#','#...#...#.#',
+             '#.#.#.#.#.#','#.#...#.#.#','#.#####.#.#','#.#...#...#','#.#.#.#####',
+             '#...#....H#','###########'];
   const R = G.length, C = G[0].length;
-  const at = (r, c) => (r < 0 || c < 0 || r >= R || c >= C ? '#' : G[r][c]);
+  const open = (r, c) => !(r < 0 || c < 0 || r >= R || c >= C || G[r][c] === '#');
   let S, H;
   for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) { if (G[r][c] === 'S') S = [r, c]; if (G[r][c] === 'H') H = [r, c]; }
   const prev = new Map(); const q = [S]; const seen = new Set([S.join()]);
@@ -220,28 +225,59 @@ try {
     if (r === H[0] && c === H[1]) break;
     for (const [dr, dc] of [[1,0],[-1,0],[0,1],[0,-1]]) {
       const nr = r + dr, nc = c + dc;
-      if (at(nr, nc) === '#' || seen.has(nr + ',' + nc)) continue;
+      if (!open(nr, nc) || seen.has(nr + ',' + nc)) continue;
       seen.add(nr + ',' + nc); prev.set(nr + ',' + nc, [r, c]); q.push([nr, nc]);
     }
   }
   const path = []; let cur = H;
   while (cur && !(cur[0] === S[0] && cur[1] === S[1])) { path.unshift(cur); cur = prev.get(cur.join()); }
-  const px = (c) => bd.x + ((c + 0.5) / C) * bd.width;
-  const py = (r) => bd.y + ((r + 0.5) / R) * bd.height;
-  await page.mouse.move(px(S[1]), py(S[0]));
-  await page.mouse.down();
-  for (const [r, c] of path) {
-    for (let k = 0; k < 4; k++) await page.mouse.move(px(c), py(r));
-    await page.waitForTimeout(18);
+  path.unshift(S);
+  const dv = await box('.drive-view');
+  const cxp = dv.x + dv.width / 2, cyp = dv.y + dv.height / 2;
+  const swipe = async (dx, dy) => {
+    await page.mouse.move(cxp, cyp);
+    await page.mouse.down();
+    await page.mouse.move(cxp + dx * 60, cyp + dy * 60, { steps: 4 });
+    await page.mouse.up();
+  };
+  const carCell = () => page.evaluate(({ C, R }) => {
+    const el = document.querySelector('.mz-car');
+    if (!el) return null;
+    return [Math.floor((parseFloat(el.style.top) / 100) * R), Math.floor((parseFloat(el.style.left) / 100) * C)];
+  }, { C, R });
+
+  // Steer by reading where the car actually is and swiping the next
+  // direction on the route. The car buffers turns and stops at walls, so
+  // repeating the correct direction always converges.
+  const idxOf = (r, c) => path.findIndex((p) => p[0] === r && p[1] === c);
+  for (let i = 0; i < 260; i++) {
+    if (await page.getByText('You found the house.', { exact: false }).isVisible().catch(() => false)) break;
+    const cellNow = await carCell();
+    if (!cellNow) break;
+    const at = idxOf(cellNow[0], cellNow[1]);
+    if (at < 0 || at + 1 >= path.length) { await page.waitForTimeout(60); continue; }
+    const nxt = path[at + 1];
+    await swipe(Math.sign(nxt[1] - cellNow[1]), Math.sign(nxt[0] - cellNow[0]));
+    await page.waitForTimeout(60);
   }
-  await page.mouse.up();
-  await page.getByText('You found the house.', { exact: false }).waitFor({ timeout: 20000 });
-  ok('trial 4: the car drives the maze to the house');
+  await page.getByText('You found the house.', { exact: false }).waitFor({ timeout: 30000 });
+  ok('trial 4: swiping steers the car all the way to the house');
+
   const trailPts = await page.locator('.mz-trail polyline').first().getAttribute('points');
-  if (!trailPts || trailPts.split(' ').length < 20) throw new Error('route was not traced behind the car');
-  ok('trial 4: the route is traced behind the car');
-  if (await page.locator('.run-hud .hh-logo').count() !== 1) throw new Error('delivery HUD missing');
-  ok('trial 4: delivery order HUD is present');
+  const pts = (trailPts || '').trim().split(/\s+/).map((p) => p.split(',').map(Number));
+  if (pts.length < 20) throw new Error('route was not traced behind the car');
+  ok(`trial 4: the route is traced behind the car (${pts.length} points)`);
+
+  // every trail segment must be axis-aligned; a diagonal means the car
+  // cut a corner through a building, which is what tunnelling looked like
+  let diagonals = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const dx = Math.abs(pts[i][0] - pts[i - 1][0]);
+    const dy = Math.abs(pts[i][1] - pts[i - 1][1]);
+    if (dx > 0.02 && dy > 0.02) diagonals++;
+  }
+  if (diagonals > 0) throw new Error(`${diagonals} diagonal trail segments — the car cut through buildings`);
+  ok('trial 4: the route never cuts through a building');
 
   // ---------- TRIAL 5: DOOR ----------
   await page.getByText('KNOCK', { exact: true }).waitFor({ timeout: 10000 });

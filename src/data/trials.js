@@ -101,8 +101,8 @@ export const DARTS = {
 // ---------- TRIAL 4 — DELIVERY MAZE ----------
 export const MAZE = {
   title: 'DELIVERY',
-  sub: 'DRAG THE CAR TO THE HOUSE',
-  hint: 'DRAG THE CAR',
+  sub: 'SWIPE TO TURN — THE CAR DRIVES ITSELF',
+  hint: 'SWIPE A DIRECTION TO PULL OUT',
   // '#' building  '.' road  'S' store  'H' house
   // Perfect maze: exactly one route, real dead ends. 74 steps end to end.
   grid: [

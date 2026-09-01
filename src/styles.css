@@ -867,15 +867,26 @@ input, textarea, select { font-family: inherit; }
 .run-clock small { font-size: 7.5px; letter-spacing: 0.12em; color: var(--cream-dim); }
 .run-clock.late span { color: #ff9d8a; }
 
-.maze-board {
-  position: relative; width: 100%;
+/* A fixed-height window onto a map that is bigger than the screen.
+   The old board had to fit entirely on screen and could not be scrolled
+   (dragging needs touch-action:none), so the house was unreachable. */
+.drive-view {
+  position: relative;
+  width: 100%;
+  height: min(46vh, 380px);
+  border-radius: 10px;
+  overflow: hidden;
   background: #0f0d09;
-  border-radius: 10px; overflow: hidden;
-  touch-action: none; user-select: none; -webkit-user-select: none;
+  touch-action: none;
+  user-select: none; -webkit-user-select: none;
   box-shadow: 0 16px 38px rgba(0,0,0,0.65), inset 0 0 0 1px rgba(239,230,208,0.08);
 }
+.drive-map {
+  position: absolute; left: 0; top: 0;
+  aspect-ratio: 11 / 17;
+  will-change: transform;
+}
 .mz { position: absolute; }
-/* asphalt with a faint centre line */
 .mz-road {
   background:
     repeating-linear-gradient(90deg, transparent 0 46%, rgba(240,225,180,0.13) 46% 54%, transparent 54% 100%),
@@ -895,12 +906,12 @@ input, textarea, select { font-family: inherit; }
   background: linear-gradient(180deg, #d8342a, #9c1a12);
   color: #ffe9a8;
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--serif); font-weight: 600; font-size: 11px; letter-spacing: 0.04em;
+  font-family: var(--serif); font-weight: 600; font-size: 12px; letter-spacing: 0.04em;
   box-shadow: 0 0 12px rgba(216,52,42,0.8), inset 0 0 0 1px rgba(255,220,140,0.5);
 }
 .mz-house {
   position: absolute; inset: 6%;
-  background: linear-gradient(180deg, #4e7a3f 0 42%, #dcccA4 42%);
+  background: linear-gradient(180deg, #4e7a3f 0 42%, #dccca4 42%);
   clip-path: polygon(50% 0, 100% 42%, 88% 42%, 88% 100%, 12% 100%, 12% 42%, 0 42%);
   animation: housePulse 1.9s ease-in-out infinite;
 }
@@ -911,6 +922,39 @@ input, textarea, select { font-family: inherit; }
   transform: translate(-50%, -50%);
   filter: drop-shadow(0 3px 7px rgba(0,0,0,0.85));
   pointer-events: none;
+}
+
+/* heading + distance to the customer, since they are usually off screen */
+.drive-compass {
+  position: absolute; right: 10px; top: 10px; z-index: 6;
+  display: flex; align-items: center; gap: 7px;
+  background: rgba(12,10,7,0.78);
+  border: 1px solid rgba(239,230,208,0.16);
+  border-radius: 20px; padding: 5px 11px 5px 7px;
+  pointer-events: none;
+}
+.drive-compass i {
+  width: 0; height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 13px solid var(--gold-bright);
+  transition: transform 0.18s ease;
+  filter: drop-shadow(0 0 5px rgba(237,210,130,0.7));
+}
+.drive-compass b {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+  color: var(--cream); font-variant-numeric: tabular-nums;
+}
+.drive-cue {
+  position: absolute; left: 50%; bottom: 12px; z-index: 6;
+  transform: translateX(-50%);
+  background: rgba(12,10,7,0.82);
+  border: 1px solid rgba(201,162,39,0.4);
+  border-radius: 18px; padding: 7px 14px;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.18em;
+  color: var(--gold-bright); white-space: nowrap;
+  pointer-events: none;
+  animation: pulseHint 1.9s ease-in-out infinite;
 }
 
 /* ============================================================
