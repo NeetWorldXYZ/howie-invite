@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useReducer, useRef } from 
 import { storage } from './persistence.js';
 import { setMuted, unlockAudio } from './sound.js';
 
-// phase: 'envelope' -> 'invitation' -> 'trials' (1..5) -> 'finale'
+// phase: 'envelope' -> 'invitation' -> 'trials' (1..6) -> 'finale'
 const initialState = {
   phase: 'envelope',
   trial: 1,
@@ -13,7 +13,8 @@ const initialState = {
     pulls: 0,          // slot handle pulls before the jackpot
     jackpotOnPull: 0,
     darts: 0,          // darts thrown at the wall
-    doorWrongs: 0,     // wrong answers at the door
+    keyWrongs: 0,      // wrong dough balls picked
+    clockoutWrongs: 0, // wrong clock-out pins
   },
 };
 
@@ -25,12 +26,12 @@ function reducer(state, action) {
       return { ...state, phase: 'trials', trial: 1, startTime: state.startTime || Date.now() };
     case 'ADVANCE': {
       const next = state.trial + 1;
-      if (next > 5) return { ...state, phase: 'finale', endTime: state.endTime || Date.now() };
+      if (next > 6) return { ...state, phase: 'finale', endTime: state.endTime || Date.now() };
       return { ...state, trial: next };
     }
     case 'GOTO': // dev only
       if (action.trial === 0) return { ...initialState };
-      if (action.trial === 6) {
+      if (action.trial === 7) {
         return { ...state, phase: 'finale', startTime: state.startTime || Date.now() - 300000, endTime: Date.now() };
       }
       return { ...state, phase: 'trials', trial: action.trial, startTime: state.startTime || Date.now() };

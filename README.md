@@ -4,13 +4,17 @@ A gold-foil Hungry Howie's golden ticket that makes the recipient work through
 five hands-on trials before the Howies Finest league invite is revealed.
 Mobile-first, ~5 minutes. Every trial is a physical interaction, not a puzzle.
 
-| # | Trial | What you do | The turn |
-| --- | --- | --- | --- |
-| 1 | The Machine | drag the lever to pull the slot handle | it only ever hits on MAX BET — then three middle fingers |
-| 2 | Make One Pizza | smear sauce, sprinkle cheese, tap pepperoni | order is enforced; it tells you off if you skip ahead |
-| 3 | The Balloon Wall | flick darts at a fairground wall | one balloon holds a slip of paper; the rest recede |
-| 4 | Delivery | drag the Howie's car through a street maze | ends at the house, which becomes the door |
-| 5 | The Door | knock three times, answer through the door | "How many oz is an All Corners dough ball?" — 11 |
+| # | Trial | What you do |
+| --- | --- | --- |
+| 1 | The Machine | drag the slot lever; it only pays on MAX BET, then three middle fingers |
+| 2 | Make One Pizza | sauce, cheese, pepperoni — in that order |
+| 3 | Balloon Pop | flick darts; one balloon holds the Book of Records note |
+| 4 | Hot Bag | 15 seconds to box the order against a draining meter |
+| 5 | The Key | a key is hidden in one of three dough balls and they shuffle; the box it opens holds a scrap with the clock-out pin |
+| 6 | Clock Out | punch out with the pin, then the phone rings |
+
+Saying no to Dennis gets you thrown out; you can call back and grovel, or
+start over. Either way it ends at the gates with the league link.
 
 The paper in trial 3 is Howie's Book of Records: **Kory & Jason, Dough Champs**.
 It has to be acknowledged before you can move on.
@@ -59,6 +63,7 @@ node scripts/playthrough.mjs   # Playwright E2E driving REAL gestures: tears the
                                # peps the pizza, flicks darts until the paper drops,
                                # BFS-solves and drives the maze, knocks, answers 11.
                                # Also checks refresh persistence and finale gating.
+node scripts/check-sfx.mjs     # every sfx.<name>() a component calls must exist
 node scripts/screens.mjs       # screenshots every trial for visual QA
 ```
 
@@ -70,7 +75,7 @@ node scripts/screens.mjs       # screenshots every trial for visual QA
 | `src/data/trials.js` | ALL copy, jokes, and tuning numbers for every trial. Change content here, not in components. |
 | `src/persistence.js` | storage adapter. Implement the same 5-method interface with Supabase and swap it in `createStorage()` to add the shared leaderboard — game code doesn't change. Invite tokens read from `?t=`. |
 | `src/GameContext.jsx` | game state, stats tracking, autosave |
-| `src/components/trials/` | one component per trial (T1Slot … T5Door) |
+| `src/components/trials/` | one component per trial (T1Slot … T6ClockOut) |
 | `src/components/art.jsx` | logo, middle finger, slot symbols, delivery car |
 | `src/assets/howies-logo.png` | official logo, white background knocked out, inlined at build |
 | `src/sound.js` | WebAudio-synthesized SFX (no assets), mute routes through one gain |

@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node scripts/playthrough.mjs"
+    "test": "node scripts/playthrough.mjs",
+    "check": "node scripts/check-sfx.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

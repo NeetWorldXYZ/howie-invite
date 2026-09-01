@@ -1,6 +1,7 @@
 import React from 'react';
 import logoUrl from '../assets/howies-logo.png';
 import fingerUrl from '../assets/middle-finger.png';
+import headUrl from '../assets/howies-head.png';
 
 // Official Hungry Howie's logo, background knocked out.
 export function Logo({ width = 150, className = '', style }) {
@@ -110,5 +111,22 @@ export function Dart({ length = 42 }) {
       <path d="M11 32 L20 48 L11 44 Z" fill="#e8bd3a" stroke="#8a6d14" strokeWidth="1.1" />
       <rect x="10" y="31" width="2" height="20" rx="1" fill="#8a8f99" />
     </svg>
+  );
+}
+
+// Howie at the gates.
+//
+// STAND-IN. To use the real artwork instead: drop the file at
+// src/assets/howie-jesus.png, import it here, and replace this whole
+// <figure> body with a single <img className="hj-real" src={...} />.
+export function HowieJesus({ width = 260 }) {
+  return (
+    <figure className="hj" style={{ width }}>
+      <span className="hj-rays" />
+      <span className="hj-gate l" />
+      <span className="hj-gate r" />
+      <span className="hj-halo" />
+      <img className="hj-head" src={headUrl} alt="" draggable={false} />
+    </figure>
   );
 }

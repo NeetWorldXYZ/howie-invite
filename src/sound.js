@@ -166,6 +166,11 @@ export const sfx = {
     for (let i = 0; i < 5; i++) noise({ dur: 0.1, vol: 0.06, at: 0.06 + i * 0.04, low: 1200, high: 6000 });
   },
   click() { tone({ freq: 1500, dur: 0.022, type: 'square', vol: 0.07 }); },
+  error() {
+    tone({ freq: 220, dur: 0.16, type: 'square', vol: 0.13 });
+    tone({ freq: 175, dur: 0.26, type: 'square', vol: 0.13, at: 0.14 });
+    noise({ dur: 0.2, vol: 0.06, at: 0.1, low: 150, high: 900 });
+  },
   // --- slot machine ---
   reelWhir() { return loopNoise({ vol: 0.05, low: 700, high: 2600, wobble: 26 }); },
   nearMiss() {
@@ -298,6 +303,59 @@ export const sfx = {
   cardSlide() {
     noise({ dur: 0.62, vol: 0.11, low: 1300, high: 5600 });
     tone({ freq: 320, dur: 0.5, type: 'sine', vol: 0.04, slide: 220 });
+  },
+  // --- the key ---
+  swap() { noise({ dur: 0.07, vol: 0.09, low: 400, high: 2200 }); },
+  keyJingle() {
+    tone({ freq: 2100, dur: 0.09, type: 'triangle', vol: 0.11 });
+    tone({ freq: 2800, dur: 0.12, type: 'triangle', vol: 0.09, at: 0.07 });
+    tone({ freq: 2400, dur: 0.2, type: 'sine', vol: 0.07, at: 0.15 });
+  },
+  chestOpen() {
+    tone({ freq: 130, dur: 0.7, type: 'sawtooth', vol: 0.06, slide: 90 });
+    noise({ dur: 0.6, vol: 0.07, low: 250, high: 1400 });
+    for (let i = 0; i < 5; i++) tone({ freq: 1400 + i * 320, dur: 0.5, type: 'sine', vol: 0.05, at: 0.4 + i * 0.07 });
+  },
+  // --- clock out and the call ---
+  punchClock() {
+    noise({ dur: 0.05, vol: 0.3, low: 200, high: 1600 });
+    tone({ freq: 150, dur: 0.14, type: 'square', vol: 0.2, slide: -70 });
+    tone({ freq: 900, dur: 0.1, type: 'sine', vol: 0.08, at: 0.1 });
+  },
+  countBeep() { tone({ freq: 700, dur: 0.13, type: 'square', vol: 0.11 }); },
+  phoneRing() {
+    // classic two-tone bell, on a repeating cadence, until picked up
+    const c = ensure();
+    if (!c) return { stop() {} };
+    let live = true;
+    const burst = () => {
+      if (!live) return;
+      for (let r = 0; r < 2; r++) {
+        for (let i = 0; i < 12; i++) {
+          const at = r * 0.42 + i * 0.03;
+          tone({ freq: i % 2 ? 1050 : 800, dur: 0.03, type: 'square', vol: 0.09, at });
+        }
+      }
+      setTimeout(burst, 2400);
+    };
+    burst();
+    return { stop() { live = false; } };
+  },
+  pickUp() {
+    noise({ dur: 0.06, vol: 0.16, low: 300, high: 2000 });
+    tone({ freq: 420, dur: 0.08, type: 'square', vol: 0.08 });
+  },
+  dial() {
+    const n = [941, 1336, 697, 1209, 852, 1477];
+    n.forEach((f, i) => tone({ freq: f, dur: 0.09, type: 'sine', vol: 0.08, at: i * 0.13 }));
+  },
+  heaven() {
+    const chord = [523, 659, 784, 1047, 1319];
+    chord.forEach((f, i) => {
+      tone({ freq: f, dur: 2.6, type: 'sine', vol: 0.09, at: i * 0.14 });
+      tone({ freq: f * 2, dur: 2, type: 'sine', vol: 0.035, at: i * 0.14 });
+    });
+    for (let i = 0; i < 14; i++) noise({ dur: 0.09, vol: 0.03, at: 0.7 + i * 0.11, low: 4000, high: 9000 });
   },
   tap() { tone({ freq: 1800, dur: 0.03, type: 'square', vol: 0.06 }); },
   paper() { noise({ dur: 0.18, vol: 0.08, low: 1500, high: 6000 }); },

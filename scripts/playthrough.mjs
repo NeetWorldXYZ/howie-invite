@@ -208,16 +208,12 @@ try {
   ok('trial 3: the note names the dough champs');
   await btn('ALL HAIL THE DOUGH CHAMPS').click();
 
-  // ---------- TRIAL 4: DELIVERY ----------
-  // intro: box the order and load the bag inside fifteen seconds
+  // ---------- TRIAL 4: THE HOT BAG ----------
   await page.locator('.loadout').waitFor();
   await page.getByText('OUT OF THE OVEN').waitFor();
-  if (await page.locator('.drive-view').count() !== 0) throw new Error('the drive is reachable without loading the bag');
-  ok('trial 4: the load-out gates the drive');
   const loOverflow = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
-  if (loOverflow > 4) throw new Error(`load-out overflows the screen by ${loOverflow}px`);
-  ok('trial 4: the load-out fits on screen');
-
+  if (loOverflow > 4) throw new Error(`hot bag overflows the screen by ${loOverflow}px`);
+  ok('trial 4: the hot bag fits on screen');
   const lo = await box('.lo-stage');
   const lox = lo.x + lo.width / 2, loy = lo.y + lo.height / 2;
   const loStart = Date.now();
@@ -225,124 +221,96 @@ try {
   while (Date.now() - loStart < 16000) {
     await page.mouse.click(lox, loy);
     loTaps++;
-    if (loTaps % 4 === 0 && await page.locator('.drive-view').count()) break;
+    if (loTaps % 4 === 0 && await page.locator('.shuffle-table').count()) break;
   }
-  await page.locator('.drive-view').waitFor({ timeout: 5000 });
+  await page.locator('.shuffle-table').waitFor({ timeout: 6000 });
   ok(`trial 4: mashing loads the bag in time (${loTaps} taps)`);
 
-  await page.locator('.run-hud').waitFor();
-  await page.getByText('ORDER #4471').waitFor();
-  ok('trial 4: delivery order slip is present');
+  // ---------- TRIAL 5: THE KEY ----------
+  // the key is shown, then hidden, then the balls shuffle
+  await page.locator('.slot-key').waitFor({ timeout: 4000 });
+  ok('trial 5: the key is shown before it is hidden');
+  await page.locator('.dough-slot.pickable').first().waitFor({ timeout: 25000 });
+  ok('trial 5: the shuffle runs and then lets you pick');
 
-  // the whole trial has to fit — the old board ran off the bottom and
-  // could not be scrolled to, because steering needs touch-action:none
-  const mazeOverflow = await page.evaluate(() =>
-    document.documentElement.scrollHeight - window.innerHeight);
-  if (mazeOverflow > 4) throw new Error(`delivery trial overflows the screen by ${mazeOverflow}px`);
-  ok('trial 4: fits on screen with nothing below the fold');
-
-  // BFS the maze, convert the route to a list of turns, swipe them
-  const G = ['###########','#S#.....#.#','#.###.#.#.#','#...#.#...#','###.#.###.#',
-             '#...#.#...#','#.###.#.###','#.....#...#','#########.#','#...#...#.#',
-             '#.#.#.#.#.#','#.#...#.#.#','#.#####.#.#','#.#...#...#','#.#.#.#####',
-             '#...#....H#','###########'];
-  const R = G.length, C = G[0].length;
-  const open = (r, c) => !(r < 0 || c < 0 || r >= R || c >= C || G[r][c] === '#');
-  let S, H;
-  for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) { if (G[r][c] === 'S') S = [r, c]; if (G[r][c] === 'H') H = [r, c]; }
-  const prev = new Map(); const q = [S]; const seen = new Set([S.join()]);
-  while (q.length) {
-    const [r, c] = q.shift();
-    if (r === H[0] && c === H[1]) break;
-    for (const [dr, dc] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-      const nr = r + dr, nc = c + dc;
-      if (!open(nr, nc) || seen.has(nr + ',' + nc)) continue;
-      seen.add(nr + ',' + nc); prev.set(nr + ',' + nc, [r, c]); q.push([nr, nc]);
-    }
+  // follow the key through the DOM (React keys the slot by ball id, so the
+  // element carrying the key keeps its identity) and pick it
+  let got = false;
+  for (let round = 0; round < 6 && !got; round++) {
+    await page.locator('.dough-slot.pickable').first().waitFor({ timeout: 25000 });
+    // the winning slot is the one whose ball index matches the key; read it
+    // off the rendered order by clicking each in turn across rounds
+    const slots = await page.locator('.dough-slot').all();
+    const boxes = [];
+    for (const sl of slots) boxes.push(await sl.boundingBox());
+    boxes.sort((x, y) => x.x - y.x);
+    const pickIdx = round % 3;
+    await page.mouse.click(boxes[pickIdx].x + boxes[pickIdx].width / 2, boxes[pickIdx].y + boxes[pickIdx].height / 2);
+    await page.waitForTimeout(600);
+    got = await page.getByText('THERE IT IS.').isVisible().catch(() => false);
   }
-  const path = []; let cur = H;
-  while (cur && !(cur[0] === S[0] && cur[1] === S[1])) { path.unshift(cur); cur = prev.get(cur.join()); }
-  path.unshift(S);
-  const dv = await box('.drive-view');
-  const cxp = dv.x + dv.width / 2, cyp = dv.y + dv.height / 2;
-  const swipe = async (dx, dy) => {
-    await page.mouse.move(cxp, cyp);
-    await page.mouse.down();
-    await page.mouse.move(cxp + dx * 60, cyp + dy * 60, { steps: 4 });
-    await page.mouse.up();
-  };
-  const carCell = () => page.evaluate(({ C, R }) => {
-    const el = document.querySelector('.mz-car');
-    if (!el) return null;
-    return [Math.floor((parseFloat(el.style.top) / 100) * R), Math.floor((parseFloat(el.style.left) / 100) * C)];
-  }, { C, R });
+  if (!got) throw new Error('never found the key in six rounds');
+  ok('trial 5: picking the right dough ball yields the key');
 
-  // Steer by reading where the car actually is and swiping the next
-  // direction on the route. The car buffers turns and stops at walls, so
-  // repeating the correct direction always converges.
-  const idxOf = (r, c) => path.findIndex((p) => p[0] === r && p[1] === c);
-  for (let i = 0; i < 260; i++) {
-    if (await page.getByText('You found the house.', { exact: false }).isVisible().catch(() => false)) break;
-    const cellNow = await carCell();
-    if (!cellNow) break;
-    const at = idxOf(cellNow[0], cellNow[1]);
-    if (at < 0 || at + 1 >= path.length) { await page.waitForTimeout(60); continue; }
-    const nxt = path[at + 1];
-    await swipe(Math.sign(nxt[1] - cellNow[1]), Math.sign(nxt[0] - cellNow[0]));
-    await page.waitForTimeout(60);
-  }
-  await page.getByText('You found the house.', { exact: false }).waitFor({ timeout: 30000 });
-  ok('trial 4: swiping steers the car all the way to the house');
+  await btn('TAKE THE KEY').click();
+  await page.locator('.chest').waitFor();
+  ok('trial 5: the key leads to the box');
+  await page.locator('.chest-lock').click();
+  await page.locator('.scrap').waitFor({ timeout: 5000 });
+  await page.getByText('DO NOT LOSE THIS').waitFor();
+  ok('trial 5: the box opens onto the scrap of paper');
+  // the clock-out pin must be findable on it
+  const scrapText = await page.locator('.scrap').innerText();
+  if (!scrapText.includes('7319')) throw new Error('the clock-out pin is not on the scrap');
+  ok('trial 5: the clock-out pin is written on the scrap');
+  await btn('TAKE THE PAPER').click();
 
-  const trailPts = await page.locator('.mz-trail polyline').first().getAttribute('points');
-  const pts = (trailPts || '').trim().split(/\s+/).map((p) => p.split(',').map(Number));
-  if (pts.length < 20) throw new Error('route was not traced behind the car');
-  ok(`trial 4: the route is traced behind the car (${pts.length} points)`);
-
-  // every trail segment must be axis-aligned; a diagonal means the car
-  // cut a corner through a building, which is what tunnelling looked like
-  let diagonals = 0;
-  for (let i = 1; i < pts.length; i++) {
-    const dx = Math.abs(pts[i][0] - pts[i - 1][0]);
-    const dy = Math.abs(pts[i][1] - pts[i - 1][1]);
-    if (dx > 0.02 && dy > 0.02) diagonals++;
-  }
-  if (diagonals > 0) throw new Error(`${diagonals} diagonal trail segments — the car cut through buildings`);
-  ok('trial 4: the route never cuts through a building');
-
-  // ---------- TRIAL 5: DOOR ----------
-  await page.getByText('KNOCK', { exact: true }).waitFor({ timeout: 10000 });
-  const door = await box('.door');
-  for (let i = 0; i < 3; i++) {
-    await page.mouse.click(door.x + door.width / 2, door.y + door.height / 2);
-    await page.waitForTimeout(160);
-  }
-  await page.getByText('All Corners', { exact: false }).waitFor({ timeout: 8000 });
-  ok('trial 5: three knocks brings someone to the door');
-  // the whole exchange must sit on the door, with nothing below the fold
-  const overlayOnDoor = await page.locator('.door .door-panel').count() > 0
-    && await page.locator('.door-frame .door-overlay.ask').count() === 1;
-  if (!overlayOnDoor) throw new Error('question is not rendered on the door');
-  const scrollable = await page.evaluate(() =>
-    document.documentElement.scrollHeight - window.innerHeight);
-  if (scrollable > 4) throw new Error(`door trial requires scrolling (${scrollable}px overflow)`);
-  ok('trial 5: question + keypad sit on the door, no scrolling needed');
-  // wrong answer first
-  await btn('9').click();
+  // ---------- TRIAL 6: CLOCK OUT ----------
+  await page.locator('.punch-clock').waitFor();
+  ok('trial 6: the punch clock is up');
+  // the paper can be pulled back up while punching out
+  await btn('CHECK THE PAPER').click();
+  await page.locator('.overlay .scrap').waitFor();
+  ok('trial 6: the scrap can be referenced during clock-out');
+  await page.locator('.overlay-close').click();
+  // wrong pin first
+  for (const d of ['1', '1', '1', '1']) await btn(d).click();
   await btn('OK').click();
-  await page.getByText('That is not it.').waitFor();
-  ok('trial 5: wrong ounces rejected');
-  await btn('1').click();
-  await btn('1').click();
+  await page.getByText('Not the pin.').waitFor();
+  ok('trial 6: wrong pin rejected');
+  for (const d of ['7', '3', '1', '9']) await btn(d).click();
   await btn('OK').click();
-  await page.locator('.door.open').waitFor({ timeout: 6000 });
-  ok('trial 5: 11 oz opens the door');
+  await page.getByText('CLOCKED OUT').first().waitFor();
+  ok('trial 6: 7319 punches you out');
+
+  // fade to black, 3-2-1, then the phone
+  await page.locator('.blackout').waitFor({ timeout: 6000 });
+  ok('trial 6: the screen fades to black');
+  await page.locator('.count-num').waitFor({ timeout: 5000 });
+  ok('trial 6: the countdown runs');
+  await page.locator('.red-phone.ringing').waitFor({ timeout: 8000 });
+  await page.getByText('DENNIS (STORE)').waitFor();
+  ok('trial 6: the red phone rings');
+  await btn('ANSWER').click();
+  await page.getByText('come back in', { exact: false }).waitFor({ timeout: 8000 });
+  ok('trial 6: Dennis asks you to come back in');
+
+  // the lazy-bones branch first
+  await btn('NO, SORRY, I AM A LAZY BONES').click();
+  await page.locator('.getout-scene').waitFor();
+  await page.getByText('GET OUT').waitFor();
+  ok('trial 6: saying no gets you thrown out');
+  await btn('CALL HIM BACK').click();
+  await page.getByText('CALLING DENNIS…').waitFor();
+  await page.getByText('Please forgive me', { exact: false }).waitFor({ timeout: 15000 });
+  ok('trial 6: calling back makes you grovel');
+  await btn('DRIVE BACK').click();
 
   // ---------- FINALE ----------
-  await page.getByText('WELCOME TO THE LEAGUE').waitFor({ timeout: 10000 });
+  await page.locator('.heaven').waitFor({ timeout: 10000 });
+  await page.getByText('Welcome to the league, my friend.').waitFor();
   await page.getByText('HOWIES FINEST').waitFor();
-  if (await page.locator('.confetti .cf').count() < 40) throw new Error('no confetti');
-  if (await page.locator('.finale-card .hh-logo').count() !== 1) throw new Error('logo missing from finale');
+  if (await page.locator('.hj').count() !== 1) throw new Error('Howie is not at the gates');
   const invite = page.getByRole('link', { name: 'ACCEPT LEAGUE INVITATION' });
   await invite.waitFor();
   const href = await invite.getAttribute('href');
@@ -350,10 +318,10 @@ try {
     throw new Error('invite button does not point at the ESPN league: ' + href);
   }
   ok('finale: the invite button links to the real ESPN league');
-  ok('finale: confetti, logo, welcome and the invite button');
+  ok('finale: Howie at the gates, the blessing and the invite button');
 
   await page.reload();
-  await page.getByText('WELCOME TO THE LEAGUE').waitFor();
+  await page.locator('.heaven').waitFor({ timeout: 10000 });
   ok('finale survives refresh');
 
   // The finale must not be a dead end — you have to be able to play again.
@@ -374,7 +342,7 @@ try {
   const p2 = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
   await p2.goto(BASE);
   const fresh = await p2.getByText('You have been chosen.').isVisible().catch(() => false);
-  const leaked = await p2.getByText('WELCOME TO THE LEAGUE').isVisible().catch(() => false);
+  const leaked = await p2.locator('.heaven').isVisible().catch(() => false);
   if (fresh && !leaked) ok('a fresh visitor starts at the envelope, not the finale');
   else fail('gating', `fresh=${fresh} leaked=${leaked}`);
   await p2.close();

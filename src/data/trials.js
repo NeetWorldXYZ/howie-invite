@@ -98,77 +98,127 @@ export const DARTS = {
   },
 };
 
-// ---------- TRIAL 4 — DELIVERY MAZE ----------
-export const MAZE = {
-  title: 'DELIVERY',
-  sub: 'SWIPE TO TURN — THE CAR DRIVES ITSELF',
-  hint: 'SWIPE A DIRECTION TO PULL OUT',
-  // '#' building  '.' road  'S' store  'H' house
-  // Perfect maze: exactly one route, real dead ends. 74 steps end to end.
-  grid: [
-    '###########',
-    '#S#.....#.#',
-    '#.###.#.#.#',
-    '#...#.#...#',
-    '###.#.###.#',
-    '#...#.#...#',
-    '#.###.#.###',
-    '#.....#...#',
-    '#########.#',
-    '#...#...#.#',
-    '#.#.#.#.#.#',
-    '#.#...#.#.#',
-    '#.#####.#.#',
-    '#.#...#...#',
-    '#.#.#.#####',
-    '#...#....H#',
-    '###########',
-  ],
+// ---------- TRIAL 4 — THE HOT BAG ----------
+export const BAG = {
+  title: 'OUT OF THE OVEN',
+  sub: 'TAP TO BOX IT AND LOAD THE BAG',
   order: { num: '#4471', items: '2 LG PEP · 1 HOWIE BREAD', addr: '2216 TELEGRAPH RD' },
-
-  // The intro: mash to get the order boxed and into the bag before it
-  // goes cold. Tuned to demand roughly four taps a second, sustained.
-  load: {
-    title: 'OUT OF THE OVEN',
-    sub: 'TAP TO BOX IT AND LOAD THE BAG',
-    seconds: 15,
-    need: 100,
-    perTap: 2.9,
-    decay: 5,          // units lost per second — stopping loses ground
-    hint: 'TAP FAST. IT IS ALREADY COOLING.',
-    success: 'IN THE BAG. GO.',
-    fails: [
-      'Cold. Dennis remade it. Try again.',
-      'Cold again. He remade it again. He did not say anything, which is worse.',
-      'The customer has called the store. Maria took it. Go.',
-      'Dennis is now watching you do this.',
-    ],
-    retry: 'REMAKE IT',
-  },
-  promise: '30 MINUTES OR LESS',
-  lateNote: 'It has been longer than thirty minutes. Nobody is timing you. The pizza knows.',
-  arrive: 'You found the house. No porch light, obviously.',
+  seconds: 15,
+  need: 100,
+  perTap: 2.9,
+  decay: 5,            // units lost per second — stopping loses ground
+  hint: 'TAP FAST. IT IS ALREADY COOLING.',
+  success: 'IN THE BAG. MARCUS TAKES IT FROM HERE.',
+  fails: [
+    'Cold. Dennis remade it. Try again.',
+    'Cold again. He remade it again. He did not say anything, which is worse.',
+    'The customer has called the store. Maria took it. Go.',
+    'Dennis is now watching you do this.',
+  ],
+  retry: 'REMAKE IT',
 };
 
-// ---------- TRIAL 5 — THE DOOR ----------
-export const DOOR = {
-  title: '',
-  knockPrompt: 'KNOCK',
-  knocksNeeded: 3,
-  waiting: 'Somebody is coming.',
-  voice: 'Before I open this door.',
-  question: 'How many ounces is an All Corners dough ball cut into?',
-  unit: 'OZ',
-  answer: 11,
-  wrong: ['That is not it.', 'No.', 'You did not work there, did you.'],
-  hintAfter: 2,
-  hint: 'It is between ten and twelve. That is the hint. That is the whole hint.',
-  correct: 'Yeah. Alright. Come in.',
+// ---------- TRIAL 5 — THE KEY ----------
+// A key is pressed into one of three dough balls. They get shuffled.
+// Keep your eye on it. This is meant to be genuinely hard.
+export const KEY = {
+  title: 'DENNIS WANTS TO SHOW YOU SOMETHING',
+  intro: 'There is a key in one of these. Watch it.',
+  watching: 'WATCH.',
+  picking: 'WHICH ONE.',
+  swaps: 16,
+  startMs: 460,
+  endMs: 165,
+  wrong: [
+    'Nothing in that one. He re-hides it.',
+    'Wrong again. He is enjoying this more than he should be.',
+    'No. He does this at parties.',
+    'Still no. Maria has stopped watching.',
+  ],
+  right: 'THERE IT IS.',
+  cta: 'TAKE THE KEY',
+
+  chest: {
+    title: 'THE BOX',
+    sub: 'PUT THE KEY IN',
+    hint: 'TAP THE LOCK',
+    opened: 'It is mostly garbage.',
+    cta: 'TAKE THE PAPER',
+  },
+
+  // The clock-out code is on this scrap, buried in junk. It can be
+  // pulled back up during clock-out.
+  note: {
+    heading: 'DO NOT LOSE THIS',
+    lines: [
+      ['scrawl', 'MARIA — the walk-in thing again'],
+      ['num', 'WALK-IN TEMP ALARM ....... 38'],
+      ['num', 'SAFE (ask Dennis) ........ 22-14-6'],
+      ['strike', 'CLOCK OUT PIN ............ 0000'],
+      ['pen', 'clock out pin is 7319 now. Dennis changed it after the thing.'],
+      ['num', 'GREASE PICKUP ............ TUES'],
+      ['scrawl', 'if the phone rings after 11 do NOT answer it'],
+      ['num', 'DUMPSTER KEY ............. taped under sink'],
+      ['scrawl', "jason owes me $14 (he knows)"],
+      ['num', 'HOWIE BREAD ............. 4 per box, not 6'],
+      ['pen', 'whoever keeps turning the oven down — I will find out'],
+    ],
+    footer: 'Kory & Jason, dough champs, still unbeaten',
+  },
+};
+
+// ---------- TRIAL 6 — CLOCK OUT ----------
+export const CLOCKOUT = {
+  title: 'END OF SHIFT',
+  sub: 'PUNCH OUT',
+  time: '12:07 AM',
+  code: '7319',
+  wrong: ['Not the pin.', 'No.', 'It is on the paper from the box.'],
+  noteBtn: 'CHECK THE PAPER',
+  accepted: 'CLOCKED OUT',
+  acceptedSub: '12:07 AM — go home',
+
+  phone: {
+    countdown: [3, 2, 1],
+    ringing: 'INCOMING',
+    caller: 'DENNIS (STORE)',
+    answer: 'ANSWER',
+    lines: [
+      "Hey. Hey — you still in the lot?",
+      "It got real busy. Like, real busy.",
+      "Any chance you can come back in?",
+    ],
+    yes: "YES, I'M ON MY WAY",
+    no: 'NO, SORRY, I AM A LAZY BONES',
+  },
+
+  getOut: {
+    big: 'GET OUT',
+    sub: 'The Commissioner has reviewed your answer.',
+    callBack: 'CALL HIM BACK',
+    startOver: 'START THE WHOLE THING OVER',
+  },
+
+  grovel: {
+    header: 'CALLING DENNIS…',
+    lines: [
+      { who: 'YOU', msg: "Dennis. Hi. Hey. It's me." },
+      { who: 'DENNIS', msg: '…' },
+      { who: 'YOU', msg: "I said a thing. On the phone. About being a lazy bones." },
+      { who: 'DENNIS', msg: 'I heard you the first time.' },
+      { who: 'YOU', msg: "I'm coming in. I'm already in the car. I'm putting shoes on in the car." },
+      { who: 'DENNIS', msg: 'You were in the lot the whole time.' },
+      { who: 'YOU', msg: "Please forgive me. Please forgive us. I'll do the walk-in. I'll do the grease trap." },
+      { who: 'DENNIS', msg: 'Come in.' },
+      { who: 'YOU', msg: 'Thank you. Thank you, Dennis.' },
+    ],
+    cta: 'DRIVE BACK',
+  },
 };
 
 // ---------- FINALE ----------
 export const FINALE = {
-  welcome: 'WELCOME TO THE LEAGUE',
+  blessing: 'Welcome to the league, my friend.',
   league: 'HOWIES FINEST',
   year: '2026',
   cta: 'ACCEPT LEAGUE INVITATION',
@@ -179,6 +229,7 @@ export const TRIALS = [
   { id: 'slot', label: 'MACHINE' },
   { id: 'pizza', label: 'PIZZA' },
   { id: 'darts', label: 'DARTS' },
-  { id: 'maze', label: 'DELIVERY' },
-  { id: 'door', label: 'THE DOOR' },
+  { id: 'bag', label: 'HOT BAG' },
+  { id: 'key', label: 'THE KEY' },
+  { id: 'clockout', label: 'CLOCK OUT' },
 ];
