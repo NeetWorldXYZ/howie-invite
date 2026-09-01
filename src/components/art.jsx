@@ -210,6 +210,11 @@ export function HowieJesus({ width = 300 }) {
 
 // The reaction shot. A grainy, pushed-in black and white close-up with
 // the caption burned in, the way the gif it stands in for looks.
+// The "Get out." reaction shot, built as old film rather than shipping a
+// clip. To use the real gif instead: add it at src/assets/get-out.gif,
+// import it (  import getOutUrl from '../assets/get-out.gif';  ) and
+// render <img className="hdy-real" src={getOutUrl} alt="Get out." /> in
+// place of the frame below.
 export function HowDareYou() {
   return (
     <div className="hdy">
@@ -218,7 +223,7 @@ export function HowDareYou() {
         <span className="hdy-grain" />
         <span className="hdy-bar top" />
         <span className="hdy-bar bottom" />
-        <span className="hdy-caption">HOW DARE YOU</span>
+        <span className="hdy-caption">GET OUT.</span>
       </div>
     </div>
   );

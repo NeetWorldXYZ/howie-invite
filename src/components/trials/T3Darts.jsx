@@ -40,8 +40,15 @@ export default function T3Darts() {
   const [msg, setMsg] = useState('');
   const [phase, setPhase] = useState('throw'); // throw | paper | note
   const [paperPos, setPaperPos] = useState({ x: 50, y: 55 });
+  const [ackStep, setAckStep] = useState(0); // the plaque demands to be hailed twice
 
-  useEffect(() => { sfx.midway(); }, []);
+  // circus curtain: closed on mount, sweeps open, then leaves the DOM
+  const [curtain, setCurtain] = useState('closed'); // closed | open | gone
+  useEffect(() => {
+    const t1 = setTimeout(() => { setCurtain('open'); sfx.curtain(); }, 700);
+    const t2 = setTimeout(() => { setCurtain('gone'); sfx.midway(); }, 2500);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
 
   useEffect(() => {
     if (phase !== 'paper') return;
@@ -140,7 +147,7 @@ export default function T3Darts() {
   };
 
   const down = (e) => {
-    if (phase !== 'throw' || flying) return;
+    if (phase !== 'throw' || flying || curtain !== 'gone') return;
     aim.current = { x: e.clientX, y: e.clientY };
     sfx.dartReady();
   };
@@ -153,22 +160,41 @@ export default function T3Darts() {
     throwDart(dx, dy);
   };
 
+  // ---------- THE RECORD, in everyone's face ----------
   if (phase === 'note') {
     const n = DARTS.note;
     return (
-      <div className="trial">
-        <header className="trial-head">
-          <div className="trial-kicker">{DARTS.title}</div>
-        </header>
-        <div className="record-note">
-          <div className="rn-head">{n.heading}</div>
-          <div className="rn-rule" />
-          <div className="rn-names">{n.names}</div>
-          <div className="rn-title">{n.title}</div>
-          <div className="rn-rule" />
-          <p className="rn-detail">{n.detail}</p>
+      <div className="plaque-scene">
+        <div className="pq-rays" aria-hidden="true" />
+        <div className="pq-flash" aria-hidden="true" />
+        <div className={'plaque' + (ackStep === 1 ? ' shook' : '')}>
+          <div className="pq-eyebrow">{n.eyebrow}</div>
+          <div className="pq-head">{n.heading}</div>
+          <div className="pq-page">{n.page}</div>
+          <div className="pq-laurel" aria-hidden="true">★ ★ ★</div>
+          <div className="pq-names">{n.names}</div>
+          <div className="pq-title">{n.title}</div>
+          <div className="pq-reign">{n.reign}</div>
+          <div className="pq-rule" />
+          {n.facts.map((f, i) => (
+            <div key={i} className="pq-fact" style={{ animationDelay: `${0.5 + i * 0.45}s` }}>{f}</div>
+          ))}
+          <div className="pq-fine">{n.fine}</div>
+          <div className="pq-stamp" aria-hidden="true">HH<span>VERIFIED</span></div>
         </div>
-        <button className="btn primary block" onClick={() => { sfx.chime(); advance(); }}>{n.ack}</button>
+
+        {ackStep === 0 ? (
+          <button className="btn primary block pq-ack" onClick={() => { sfx.deny(); setAckStep(1); }}>
+            {n.ack1}
+          </button>
+        ) : (
+          <>
+            <div className="pq-louder">{n.louder}</div>
+            <button className="btn primary block pq-ack huge" onClick={() => { sfx.fanfare(); advance(); }}>
+              {n.ack2}
+            </button>
+          </>
+        )}
       </div>
     );
   }
@@ -247,6 +273,17 @@ export default function T3Darts() {
         <div className="dart-ready" ref={readyRef} style={{ opacity: phase === 'throw' && !flying ? 1 : 0 }}>
           <Dart length={46} />
         </div>
+
+        {curtain !== 'gone' && (
+          <div className={'curtain' + (curtain === 'open' ? ' open' : '')} aria-hidden="true">
+            <div className="curtain-valance">
+              {Array.from({ length: 9 }, (_, i) => <i key={i} />)}
+            </div>
+            <div className="curtain-panel left" />
+            <div className="curtain-panel right" />
+            <div className="curtain-tease">{DARTS.curtainTease}</div>
+          </div>
+        )}
       </div>
 
       <div className="slot-msg">{phase === 'paper' ? '' : msg || DARTS.hint}</div>

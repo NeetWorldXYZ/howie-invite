@@ -165,6 +165,13 @@ try {
 
   // ---------- TRIAL 3: DARTS ----------
   await page.getByText('BALLOON POP').first().waitFor();
+  // the circus curtain opens onto the booth before anything is throwable
+  await page.locator('.curtain').waitFor({ timeout: 3000 });
+  await page.getByText('STEP RIGHT UP').waitFor();
+  ok('trial 3: the curtain is down when you arrive');
+  await page.locator('.curtain.open').waitFor({ timeout: 4000 });
+  await page.locator('.curtain').waitFor({ state: 'detached', timeout: 5000 });
+  ok('trial 3: the curtain sweeps open onto the booth');
   const wall = await box('.balloon-wall');
   let found = false;
   let dartPath = [];
@@ -194,6 +201,11 @@ try {
     await page.waitForTimeout(500);
     found = await page.locator('.prize-paper').isVisible().catch(() => false);
   }
+  if (!found) {
+    // the prize can be in the very last balloon popped, and the paper
+    // takes ~750ms to flutter out after the pop
+    found = await page.locator('.prize-paper').waitFor({ timeout: 3000 }).then(() => true).catch(() => false);
+  }
   if (!found) throw new Error('never found the balloon with the paper');
   ok('trial 3: flicking darts pops balloons until the paper is found');
   if (dartPath.length < 4) throw new Error(`dart teleported — only ${dartPath.length} positions sampled`);
@@ -204,34 +216,24 @@ try {
   await page.locator('.prize-paper').click({ force: true });
   await page.getByText("HOWIE'S BOOK OF RECORDS").waitFor();
   await page.getByText('KORY & JASON').waitFor();
-  await page.locator('.rn-title', { hasText: 'DOUGH CHAMPS' }).waitFor();
-  ok('trial 3: the note names the dough champs');
+  await page.locator('.pq-title', { hasText: 'DOUGH CHAMPS' }).waitFor();
+  ok('trial 3: the plaque names the dough champs');
+  // the plaque demands to be hailed TWICE
   await btn('ALL HAIL THE DOUGH CHAMPS').click();
+  await page.getByText('LOUDER.').waitFor({ timeout: 3000 });
+  ok('trial 3: one hail is not enough — LOUDER.');
+  await btn('ALL!! HAIL!! THE DOUGH CHAMPS!!').click();
 
-  // ---------- TRIAL 4: THE HOT BAG ----------
-  await page.locator('.loadout').waitFor();
-  await page.getByText('OUT OF THE OVEN').waitFor();
-  const loOverflow = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
-  if (loOverflow > 4) throw new Error(`hot bag overflows the screen by ${loOverflow}px`);
-  ok('trial 4: the hot bag fits on screen');
-  const lo = await box('.lo-stage');
-  const lox = lo.x + lo.width / 2, loy = lo.y + lo.height / 2;
-  const loStart = Date.now();
-  let loTaps = 0;
-  while (Date.now() - loStart < 16000) {
-    await page.mouse.click(lox, loy);
-    loTaps++;
-    if (loTaps % 4 === 0 && await page.locator('.shuffle-table').count()) break;
-  }
+  // ---------- TRIAL 4: THE KEY ----------
   await page.locator('.shuffle-table').waitFor({ timeout: 6000 });
-  ok(`trial 4: mashing loads the bag in time (${loTaps} taps)`);
-
-  // ---------- TRIAL 5: THE KEY ----------
+  const numLefts = await page.locator('.table-spot').evaluateAll((els) => els.map((e) => e.style.left));
+  if (new Set(numLefts).size !== 3) throw new Error('table position markers overlap');
+  ok('trial 4: position markers 1/2/3 stay fixed on the table');
   // the key is shown, then hidden, then the balls shuffle
   await page.locator('.slot-key').waitFor({ timeout: 4000 });
-  ok('trial 5: the key is shown before it is hidden');
+  ok('trial 4: the key is shown before it is hidden');
   await page.locator('.dough-slot.pickable').first().waitFor({ timeout: 25000 });
-  ok('trial 5: the shuffle runs and then lets you pick');
+  ok('trial 4: the shuffle runs and then lets you pick');
 
   // follow the key through the DOM (React keys the slot by ball id, so the
   // element carrying the key keeps its identity) and pick it
@@ -250,62 +252,97 @@ try {
     got = await page.getByText('THERE IT IS.').isVisible().catch(() => false);
   }
   if (!got) throw new Error('never found the key in six rounds');
-  ok('trial 5: picking the right dough ball yields the key');
+  ok('trial 4: picking the right dough ball yields the key');
 
-  await btn('TAKE THE KEY').click();
-  await page.locator('.chest').waitFor();
-  ok('trial 5: the key leads to the box');
-  await page.locator('.chest-lock').click();
+  // no button — the key floats off to the manager's office on its own
+  await page.locator('.office-scene').waitFor({ timeout: 6000 });
+  await page.locator('.float-key').waitFor();
+  ok("trial 4: the key floats into the manager's office by itself");
+  await page.getByText("THE MANAGER'S OFFICE").waitFor();
+  await page.locator('.office-scene.ready').waitFor({ timeout: 6000 });
+  await page.locator('.safe-keyhole').click();
+  await page.locator('.safe.open').waitFor({ timeout: 5000 });
+  ok('trial 4: the key opens the office safe');
+  await page.locator('.safe-paper').click();
   await page.locator('.scrap').waitFor({ timeout: 5000 });
   await page.getByText('DO NOT LOSE THIS').waitFor();
-  ok('trial 5: the box opens onto the scrap of paper');
+  ok('trial 4: the safe holds the scrap of paper');
   // the clock-out pin must be findable on it
   const scrapText = await page.locator('.scrap').innerText();
   if (!scrapText.includes('7319')) throw new Error('the clock-out pin is not on the scrap');
-  ok('trial 5: the clock-out pin is written on the scrap');
+  ok('trial 4: the clock-out pin is written on the scrap');
   await btn('TAKE THE PAPER').click();
 
-  // ---------- TRIAL 6: CLOCK OUT ----------
+  // ---------- TRIAL 5: CLOCK OUT ----------
   await page.locator('.punch-clock').waitFor();
-  ok('trial 6: the punch clock is up');
+  ok('trial 5: the punch clock is up');
+  // the pad has to be an actual phone dial — big round keys
+  const keySize = await page.locator('.dialpad .dk').first().boundingBox();
+  if (!keySize || keySize.width < 48 || keySize.height < 48) {
+    throw new Error(`dial keys too small: ${keySize && Math.round(keySize.width)}px`);
+  }
+  const padRows = await page.locator('.dialpad .dk').evaluateAll(
+    (els) => new Set(els.map((e) => Math.round(e.getBoundingClientRect().top))).size,
+  );
+  if (padRows < 4) throw new Error(`dial pad collapsed into ${padRows} row(s)`);
+  ok(`trial 5: the dial pad is phone-sized (${Math.round(keySize.width)}px keys, ${padRows} rows)`);
   // the paper can be pulled back up while punching out
   await btn('CHECK THE PAPER').click();
   await page.locator('.overlay .scrap').waitFor();
-  ok('trial 6: the scrap can be referenced during clock-out');
+  ok('trial 5: the scrap can be referenced during clock-out');
   await page.locator('.overlay-close').click();
   // wrong pin first
   for (const d of ['1', '1', '1', '1']) await btn(d).click();
-  await btn('OK').click();
+  await btn('PUNCH').click();
   await page.getByText('Not the pin.').waitFor();
-  ok('trial 6: wrong pin rejected');
+  ok('trial 5: wrong pin rejected');
   for (const d of ['7', '3', '1', '9']) await btn(d).click();
-  await btn('OK').click();
+  await btn('PUNCH').click();
   await page.getByText('CLOCKED OUT').first().waitFor();
-  ok('trial 6: 7319 punches you out');
+  ok('trial 5: 7319 punches you out');
 
   // fade to black, 3-2-1, then the phone
   await page.locator('.blackout').waitFor({ timeout: 6000 });
-  ok('trial 6: the screen fades to black');
+  ok('trial 5: the screen fades to black');
   await page.locator('.count-num').waitFor({ timeout: 5000 });
-  ok('trial 6: the countdown runs');
+  ok('trial 5: the countdown runs');
   await page.locator('.red-phone.ringing').waitFor({ timeout: 8000 });
-  await page.getByText('DENNIS (STORE)').waitFor();
-  ok('trial 6: the red phone rings');
+  await page.getByText('JESSE (STORE)').waitFor();
+  ok('trial 5: the red phone rings and it is Jesse');
   await btn('ANSWER').click();
-  await page.getByText('come back in', { exact: false }).waitFor({ timeout: 8000 });
-  ok('trial 6: Dennis asks you to come back in');
+
+  // the call plays one big line at a time, tap to advance
+  await page.locator('.call-scene').waitFor({ timeout: 6000 });
+  await page.getByText('Do NOT hang up', { exact: false }).waitFor({ timeout: 6000 });
+  ok('trial 5: the call opens on one big line');
+  for (let i = 0; i < 8; i++) {
+    if (await page.locator('.call-choice').count()) break;
+    await page.locator('.call-scene').click({ position: { x: 40, y: 300 } });
+    await page.waitForTimeout(350);
+  }
+  await page.getByText('HE IS WAITING.').waitFor({ timeout: 6000 });
+  ok('trial 5: tapping through the call lands on the big decision');
 
   // the lazy-bones branch first
   await btn('NO, SORRY, I AM A LAZY BONES').click();
   await page.locator('.getout-scene').waitFor();
-  await page.getByText('HOW DARE YOU').waitFor();
+  await page.getByText('GET OUT.').waitFor();
   if (await page.locator('.hdy-frame').count() !== 1) throw new Error('no reaction shot');
-  ok('trial 6: saying no gets you the reaction shot');
-  await btn('CALL HIM BACK').click();
-  await page.getByText('CALLING DENNIS…').waitFor();
-  await page.getByText('Please forgive me', { exact: false }).waitFor({ timeout: 15000 });
-  ok('trial 6: calling back makes you grovel');
-  await btn('DRIVE BACK').click();
+  ok('trial 5: saying no gets you the GET OUT reaction shot');
+  await btn('CALL HIM BACK. BEG.').click();
+  await page.getByText('CALLING JESSE…').waitFor();
+  // grovel is tap-to-advance now — big lines, one at a time; only the
+  // current line is on screen, so watch for the begging as it goes by
+  let begged = false;
+  for (let i = 0; i < 12; i++) {
+    if (await page.getByText('FORGIVE ME', { exact: false }).count()) begged = true;
+    if (await btn('DRIVE BACK LIKE YOU MEAN IT').count()) break;
+    await page.locator('.grovel-scene').click({ position: { x: 40, y: 300 } });
+    await page.waitForTimeout(250);
+  }
+  if (!begged) throw new Error('the grovel never actually begged');
+  ok('trial 5: the grovel plays out line by line and begs');
+  await btn('DRIVE BACK LIKE YOU MEAN IT').click();
 
   // ---------- FINALE ----------
   await page.locator('.heaven').waitFor({ timeout: 10000 });

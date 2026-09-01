@@ -196,6 +196,12 @@ export const sfx = {
     const n = [523, 659, 784, 659, 523];
     n.forEach((f, i) => tone({ freq: f, dur: 0.26, type: 'triangle', vol: 0.05, at: i * 0.17 }));
   },
+  curtain() {
+    // heavy fabric sweeping open, then a little ta-da underneath
+    noise({ dur: 0.9, vol: 0.12, low: 120, high: 900 });
+    noise({ dur: 0.7, vol: 0.07, at: 0.15, low: 400, high: 2400 });
+    [392, 523, 659, 784].forEach((f, i) => tone({ freq: f, dur: 0.3, type: 'triangle', vol: 0.06, at: 0.5 + i * 0.11 }));
+  },
   dartReady() { tone({ freq: 1500, dur: 0.04, type: 'sine', vol: 0.06 }); },
   dartThrow() {
     noise({ dur: 0.22, vol: 0.13, low: 500, high: 4200 });

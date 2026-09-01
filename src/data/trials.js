@@ -79,6 +79,7 @@ export const DARTS = {
   banner: 'EVERY PLAYER A WINNER',
   sub: 'FLICK A DART AT THE WALL',
   hint: 'SWIPE UP FROM THE DART',
+  curtainTease: 'STEP RIGHT UP',
   balloonCount: 15,
   missText: [
     'Missed.',
@@ -89,46 +90,38 @@ export const DARTS = {
   popText: ['Pop.', 'Nothing in that one.', 'Empty.', 'Also empty.'],
   noteFound: 'Something was rolled up in that one.',
   paperHint: 'TOUCH THE PAPER',
+  // The record plaque. It is meant to be excessive.
   note: {
+    eyebrow: 'CERTIFIED · NOTARIZED · LAMINATED',
     heading: "HOWIE'S BOOK OF RECORDS",
+    page: 'PAGE ONE. THERE IS ONLY ONE PAGE.',
     names: 'KORY & JASON',
     title: 'DOUGH CHAMPS',
-    detail: 'Record stands. Unbeaten. Contested only by people who were not there.',
-    ack: 'ALL HAIL THE DOUGH CHAMPS',
+    reign: 'THEN · NOW · FOREVER',
+    facts: [
+      'UNDEFEATED. UNTIED. UNBOTHERED.',
+      'Challengers to date: several. Survivors: zero.',
+      'Your name: checked twice. Not in here.',
+    ],
+    fine: 'This record may not be broken, contested, appealed, or brought up at Thanksgiving. Howie has signed off. Howie does not un-sign.',
+    ack1: 'ALL HAIL THE DOUGH CHAMPS',
+    louder: 'LOUDER.',
+    ack2: 'ALL!! HAIL!! THE DOUGH CHAMPS!!',
+    thanks: 'That is what we thought.',
   },
 };
 
-// ---------- TRIAL 4 — THE HOT BAG ----------
-export const BAG = {
-  title: 'OUT OF THE OVEN',
-  sub: 'TAP TO BOX IT AND LOAD THE BAG',
-  order: { num: '#4471', items: '2 LG PEP · 1 HOWIE BREAD', addr: '2216 TELEGRAPH RD' },
-  seconds: 15,
-  need: 100,
-  perTap: 2.9,
-  decay: 5,            // units lost per second — stopping loses ground
-  hint: 'TAP FAST. IT IS ALREADY COOLING.',
-  success: 'IN THE BAG. MARCUS TAKES IT FROM HERE.',
-  fails: [
-    'Cold. Dennis remade it. Try again.',
-    'Cold again. He remade it again. He did not say anything, which is worse.',
-    'The customer has called the store. Maria took it. Go.',
-    'Dennis is now watching you do this.',
-  ],
-  retry: 'REMAKE IT',
-};
-
-// ---------- TRIAL 5 — THE KEY ----------
+// ---------- TRIAL 4 — THE KEY ----------
 // A key is pressed into one of three dough balls. They get shuffled.
-// Keep your eye on it. This is meant to be genuinely hard.
+// Keep your eye on it — hard enough to lose, not hard enough to rage.
 export const KEY = {
-  title: 'DENNIS WANTS TO SHOW YOU SOMETHING',
+  title: 'JESSE WANTS TO SHOW YOU SOMETHING',
   intro: 'There is a key in one of these. Watch it.',
   watching: 'WATCH.',
   picking: 'WHICH ONE.',
-  swaps: 16,
-  startMs: 460,
-  endMs: 165,
+  swaps: 10,
+  startMs: 520,
+  endMs: 270,
   wrong: [
     'Nothing in that one. He re-hides it.',
     'Wrong again. He is enjoying this more than he should be.',
@@ -136,13 +129,15 @@ export const KEY = {
     'Still no. Maria has stopped watching.',
   ],
   right: 'THERE IT IS.',
-  cta: 'TAKE THE KEY',
 
-  chest: {
-    title: 'THE BOX',
-    sub: 'PUT THE KEY IN',
-    hint: 'TAP THE LOCK',
+  // The key floats up and the back office fades in around you.
+  safe: {
+    kicker: "THE MANAGER'S OFFICE",
+    plaque: 'JESSE · GM',
+    sub: 'OPEN THE SAFE',
+    hint: 'PUT THE KEY IN',
     opened: 'It is mostly garbage.',
+    paperHint: 'TAKE THE PAPER',
     cta: 'TAKE THE PAPER',
   },
 
@@ -153,9 +148,9 @@ export const KEY = {
     lines: [
       ['scrawl', 'MARIA — the walk-in thing again'],
       ['num', 'WALK-IN TEMP ALARM ....... 38'],
-      ['num', 'SAFE (ask Dennis) ........ 22-14-6'],
+      ['num', 'SAFE (ask Jesse) ......... 22-14-6'],
       ['strike', 'CLOCK OUT PIN ............ 0000'],
-      ['pen', 'clock out pin is 7319 now. Dennis changed it after the thing.'],
+      ['pen', 'clock out pin is 7319 now. Jesse changed it after the thing.'],
       ['num', 'GREASE PICKUP ............ TUES'],
       ['scrawl', 'if the phone rings after 11 do NOT answer it'],
       ['num', 'DUMPSTER KEY ............. taped under sink'],
@@ -167,51 +162,60 @@ export const KEY = {
   },
 };
 
-// ---------- TRIAL 6 — CLOCK OUT ----------
+// ---------- TRIAL 5 — CLOCK OUT ----------
 export const CLOCKOUT = {
   title: 'END OF SHIFT',
   sub: 'PUNCH OUT',
   time: '12:07 AM',
   code: '7319',
-  wrong: ['Not the pin.', 'No.', 'It is on the paper from the box.'],
+  wrong: ['Not the pin.', 'No.', 'It is on the paper from the safe.'],
   noteBtn: 'CHECK THE PAPER',
   accepted: 'CLOCKED OUT',
   acceptedSub: '12:07 AM — go home',
+  padSubmit: 'PUNCH',
 
   phone: {
     countdown: [3, 2, 1],
-    ringing: 'INCOMING',
-    caller: 'DENNIS (STORE)',
+    ringing: 'INCOMING CALL',
+    caller: 'JESSE (STORE)',
+    callerSub: "HOWIE'S · FLAT ROCK",
     answer: 'ANSWER',
+    tapHint: 'TAP TO KEEP LISTENING',
     lines: [
-      "Hey. Hey — you still in the lot?",
-      "It got real busy. Like, real busy.",
-      "Any chance you can come back in?",
+      { who: 'JESSE', msg: "Don't hang up. Do NOT hang up." },
+      { who: 'JESSE', msg: 'Marcus hit a mailbox. He is fine. The mailbox is not. The pizzas were involved.' },
+      { who: 'JESSE', msg: 'I have forty pies on the screen and Maria just walked into the walk-in and closed the door.' },
+      { who: 'JESSE', msg: 'I need you back in here. Right now. Howie needs you.' },
     ],
-    yes: "YES, I'M ON MY WAY",
+    choiceHeader: 'HE IS WAITING.',
+    choiceSub: 'THERE IS ONLY ONE RIGHT ANSWER.',
+    yes: "YES. I'M ALREADY IN THE CAR.",
     no: 'NO, SORRY, I AM A LAZY BONES',
   },
 
   getOut: {
-    sub: 'Dennis has hung up. The Commissioner was cc\'d.',
-    callBack: 'CALL HIM BACK',
+    sub: "Jesse has hung up. The Commissioner was cc'd. Howie felt it from headquarters.",
+    callBack: 'CALL HIM BACK. BEG.',
     startOver: 'START THE WHOLE THING OVER',
   },
 
   grovel: {
-    header: 'CALLING DENNIS…',
+    header: 'CALLING JESSE…',
+    dialing: 'RINGING',
+    tapHint: 'TAP TO SPEAK',
     lines: [
-      { who: 'YOU', msg: "Dennis. Hi. Hey. It's me." },
-      { who: 'DENNIS', msg: '…' },
-      { who: 'YOU', msg: "I said a thing. On the phone. About being a lazy bones." },
-      { who: 'DENNIS', msg: 'I heard you the first time.' },
-      { who: 'YOU', msg: "I'm coming in. I'm already in the car. I'm putting shoes on in the car." },
-      { who: 'DENNIS', msg: 'You were in the lot the whole time.' },
-      { who: 'YOU', msg: "Please forgive me. Please forgive us. I'll do the walk-in. I'll do the grease trap." },
-      { who: 'DENNIS', msg: 'Come in.' },
-      { who: 'YOU', msg: 'Thank you. Thank you, Dennis.' },
+      { who: 'YOU', msg: "Jesse. Hey. Hi. It's me. Don't hang up." },
+      { who: 'JESSE', msg: '…' },
+      { who: 'YOU', msg: 'I said the thing. About being a lazy bones.' },
+      { who: 'JESSE', msg: 'I had you on speaker. The whole store heard it.' },
+      { who: 'YOU', msg: 'Marcus too?' },
+      { who: 'JESSE', msg: 'Marcus especially. He stopped bleeding just to boo.' },
+      { who: 'YOU', msg: "I'm coming in. I'm in the car. I'm wearing one shoe and I'm coming in." },
+      { who: 'JESSE', msg: 'You were in the parking lot this entire call.' },
+      { who: 'YOU', msg: "I'll do the walk-in. I'll do the grease trap. I'll take the Tuesday truck. FORGIVE ME." },
+      { who: 'JESSE', msg: '…Get in here.' },
     ],
-    cta: 'DRIVE BACK',
+    cta: 'DRIVE BACK LIKE YOU MEAN IT',
   },
 };
 
@@ -228,7 +232,6 @@ export const TRIALS = [
   { id: 'slot', label: 'MACHINE' },
   { id: 'pizza', label: 'PIZZA' },
   { id: 'darts', label: 'DARTS' },
-  { id: 'bag', label: 'HOT BAG' },
   { id: 'key', label: 'THE KEY' },
   { id: 'clockout', label: 'CLOCK OUT' },
 ];

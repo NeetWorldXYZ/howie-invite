@@ -5,8 +5,14 @@ import { Overlay } from '../common.jsx';
 import { HowDareYou } from '../art.jsx';
 import { sfx } from '../../sound.js';
 
+const PAD = [
+  ['1', ''], ['2', 'ABC'], ['3', 'DEF'],
+  ['4', 'GHI'], ['5', 'JKL'], ['6', 'MNO'],
+  ['7', 'PQRS'], ['8', 'TUV'], ['9', 'WXYZ'],
+];
+
 // Punch out with the pin off the scrap, then the phone rings.
-export default function T6ClockOut() {
+export default function T5ClockOut() {
   const { advance, stat, reset } = useGame();
   // punch -> out -> black -> count -> ring -> talk -> getout -> grovel
   const [phase, setPhase] = useState('punch');
@@ -15,7 +21,7 @@ export default function T6ClockOut() {
   const [msg, setMsg] = useState('');
   const [note, setNote] = useState(false);
   const [count, setCount] = useState(null);
-  const [line, setLine] = useState(0);
+  const [line, setLine] = useState(0);      // call: index of the line on screen
   const [grovelLine, setGrovelLine] = useState(0);
   const timers = useRef([]);
   const ring = useRef(null);
@@ -63,7 +69,12 @@ export default function T6ClockOut() {
     ring.current = null;
     sfx.pickUp();
     setPhase('talk');
-    CLOCKOUT.phone.lines.forEach((_, i) => at(() => setLine(i + 1), 1300 * (i + 1)));
+    setLine(0);
+  };
+
+  const p = CLOCKOUT.phone;
+  const nextLine = () => {
+    if (line < p.lines.length) { sfx.tap(); setLine((l) => l + 1); }
   };
 
   const sayYes = () => { sfx.chime(); advance(); };
@@ -72,7 +83,7 @@ export default function T6ClockOut() {
   const callBack = () => {
     sfx.dial();
     setPhase('grovel');
-    CLOCKOUT.grovel.lines.forEach((_, i) => at(() => setGrovelLine(i + 1), 1150 * (i + 1)));
+    setGrovelLine(0);
   };
 
   // ---------- punch clock ----------
@@ -106,11 +117,21 @@ export default function T6ClockOut() {
 
         {phase === 'punch' && (
           <>
-            <div className="oz-pad pc-pad">
-              {['1','2','3','4','5','6','7','8','9','<','0'].map((d) => (
-                <button key={d} className="key" onClick={() => press(d)}>{d}</button>
+            <div className="dialpad">
+              {PAD.map(([d, sub]) => (
+                <button key={d} className="dk" onClick={() => press(d)} aria-label={d}>
+                  <span className="dk-num">{d}</span>
+                  {sub && <span className="dk-sub">{sub}</span>}
+                </button>
               ))}
-              <button className="key go" disabled={val.length !== 4} onClick={submit}>OK</button>
+              <button className="dk aux" onClick={() => press('<')} aria-label="<">⌫</button>
+              <button className="dk" onClick={() => press('0')} aria-label="0">
+                <span className="dk-num">0</span>
+                <span className="dk-sub">+</span>
+              </button>
+              <button className="dk go" disabled={val.length !== 4} onClick={submit} aria-label={CLOCKOUT.padSubmit}>
+                {CLOCKOUT.padSubmit}
+              </button>
             </div>
             {msg && <div className="slot-msg bad">{msg}</div>}
             <button className="btn ghost block small" onClick={() => { sfx.paper(); setNote(true); }}>
@@ -139,36 +160,57 @@ export default function T6ClockOut() {
   }
 
   // ---------- the phone ----------
-  if (phase === 'ring' || phase === 'talk') {
-    const p = CLOCKOUT.phone;
-    const done = line >= p.lines.length;
+  if (phase === 'ring') {
     return (
       <div className="blackout phone-scene">
-        <div className={'red-phone' + (phase === 'ring' ? ' ringing' : '')}>
+        <div className="red-phone ringing">
           <div className="rp-body">
             <span className="rp-dial" />
             <span className="rp-cord" />
           </div>
           <div className="rp-handset" />
         </div>
+        <div className="rp-label">{p.ringing}</div>
+        <div className="rp-caller">{p.caller}</div>
+        <div className="rp-caller-sub">{p.callerSub}</div>
+        <button className="btn primary big rp-answer" onClick={answer}>{p.answer}</button>
+      </div>
+    );
+  }
 
-        {phase === 'ring' ? (
+  if (phase === 'talk') {
+    const choosing = line >= p.lines.length;
+    const cur = p.lines[Math.min(line, p.lines.length - 1)];
+    return (
+      <div
+        className={'call-scene' + (choosing ? ' choosing' : '')}
+        onClick={choosing ? undefined : nextLine}
+      >
+        <div className="call-top">
+          <div className="call-status">● LIVE · STORE LINE</div>
+          <div className="call-name">{p.caller}</div>
+          <div className="call-sub">{p.callerSub}</div>
+        </div>
+
+        {!choosing ? (
           <>
-            <div className="rp-label">{p.ringing}</div>
-            <div className="rp-caller">{p.caller}</div>
-            <button className="btn primary big rp-answer" onClick={answer}>{p.answer}</button>
+            <div className="call-line" key={line}>
+              <div className="cl-who">{cur.who}</div>
+              <p className="cl-msg">{cur.msg}</p>
+            </div>
+            <div className="call-foot">
+              <div className="call-dots">
+                {p.lines.map((_, i) => <i key={i} className={i <= line ? 'on' : ''} />)}
+              </div>
+              <div className="call-tap">{p.tapHint}</div>
+            </div>
           </>
         ) : (
-          <div className="rp-talk">
-            {p.lines.slice(0, line).map((l, i) => (
-              <p key={i} className="rp-line">"{l}"</p>
-            ))}
-            {done && (
-              <div className="rp-choice">
-                <button className="btn primary block" onClick={sayYes}>{p.yes}</button>
-                <button className="btn danger block" onClick={sayNo}>{p.no}</button>
-              </div>
-            )}
+          <div className="call-choice">
+            <div className="cc-header">{p.choiceHeader}</div>
+            <div className="cc-sub">{p.choiceSub}</div>
+            <button className="cc-btn yes" onClick={sayYes}>{p.yes}</button>
+            <button className="cc-btn no" onClick={sayNo}>{p.no}</button>
           </div>
         )}
       </div>
@@ -189,24 +231,37 @@ export default function T6ClockOut() {
     );
   }
 
-  // ---------- grovelling ----------
+  // ---------- grovelling, one line at a time ----------
   const g = CLOCKOUT.grovel;
-  const gDone = grovelLine >= g.lines.length;
+  const gDone = grovelLine >= g.lines.length - 1;
+  const gl = g.lines[Math.min(grovelLine, g.lines.length - 1)];
   return (
-    <div className="trial">
-      <header className="trial-head">
-        <div className="trial-kicker">{g.header}</div>
-      </header>
-      <div className="texts-phone grovel">
-        <div className="texts">
-          {g.lines.slice(0, grovelLine).map((m, i) => (
-            <div key={i} className={'text-bubble ' + (m.who === 'YOU' ? 'me' : 'them')}>{m.msg}</div>
-          ))}
-        </div>
+    <div
+      className="grovel-scene"
+      onClick={gDone ? undefined : () => { sfx.tap(); setGrovelLine((l) => l + 1); }}
+    >
+      <div className="call-top">
+        <div className="call-status">● {g.dialing}</div>
+        <div className="call-name">{g.header}</div>
       </div>
-      {gDone && (
-        <button className="btn primary block" onClick={() => { sfx.chime(); advance(); }}>{g.cta}</button>
-      )}
+
+      <div className={'call-line grovel-line ' + (gl.who === 'YOU' ? 'me' : 'them')} key={grovelLine}>
+        <div className="cl-who">{gl.who}</div>
+        <p className="cl-msg">{gl.msg}</p>
+      </div>
+
+      <div className="call-foot">
+        <div className="call-dots">
+          {g.lines.map((_, i) => <i key={i} className={i <= grovelLine ? 'on' : ''} />)}
+        </div>
+        {gDone ? (
+          <button className="btn primary block" onClick={(e) => { e.stopPropagation(); sfx.chime(); advance(); }}>
+            {g.cta}
+          </button>
+        ) : (
+          <div className="call-tap">{g.tapHint}</div>
+        )}
+      </div>
     </div>
   );
 }
