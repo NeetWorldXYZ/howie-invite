@@ -48,8 +48,10 @@ export default function T3Darts() {
     let t = 0;
     const id = setInterval(() => {
       t += 1;
-      setPaperPos({ x: 50 + Math.sin(t / 9) * 24, y: 50 + Math.cos(t / 6.5) * 18 });
-    }, 100);
+      // gentle drift — it should feel like paper on air, not a target
+      // that dodges your thumb
+      setPaperPos({ x: 50 + Math.sin(t / 16) * 17, y: 50 + Math.cos(t / 12) * 13 });
+    }, 120);
     return () => clearInterval(id);
   }, [phase]);
 

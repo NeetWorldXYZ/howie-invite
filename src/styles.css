@@ -819,12 +819,12 @@ input, textarea, select { font-family: inherit; }
 
 .prize-paper {
   position: absolute; z-index: 9;
-  width: 64px; height: 48px; margin: -24px 0 0 -32px;
+  width: 78px; height: 58px; margin: -29px 0 0 -39px;
   transform: rotate(-7deg);
   background: linear-gradient(180deg, #fdf8ea, #ece2c6);
   border: none; border-radius: 2px;
   box-shadow: 0 8px 22px rgba(0,0,0,0.6);
-  transition: left 1s ease-in-out, top 1s ease-in-out;
+  transition: left 1.4s ease-in-out, top 1.4s ease-in-out;
   animation: paperGlow 1.6s ease-in-out infinite;
 }
 .prize-paper span {

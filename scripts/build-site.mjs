@@ -12,7 +12,7 @@ const js = readFileSync(join(dist, 'assets', assets.find((f) => f.endsWith('.js'
 const esc = (s) => s.replace(/<\/script/gi, '<\\/script');
 
 const TITLE = 'You Have Been Chosen';
-const DESC = 'One of twelve. Hungry Homies Fantasy Football 2026 — open your invitation.';
+const DESC = 'One of ten. Howies Finest Fantasy Football 2026 — open your invitation.';
 
 const out = `<!doctype html>
 <html lang="en">
@@ -24,11 +24,11 @@ const out = `<!doctype html>
 <meta name="theme-color" content="#0a0a0c">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Hungry Homies">
+<meta name="apple-mobile-web-app-title" content="Howies Finest">
 <link rel="apple-touch-icon" href="${SITE_URL}/icon.png">
 <link rel="icon" href="${SITE_URL}/icon.png">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Hungry Homies">
+<meta property="og:site_name" content="Howies Finest">
 <meta property="og:title" content="${TITLE}">
 <meta property="og:description" content="${DESC}">
 <meta property="og:url" content="${SITE_URL}/">

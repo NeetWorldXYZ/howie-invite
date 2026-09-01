@@ -21,7 +21,7 @@ export const TICKET = {
   admit: 'ADMIT ONE',
   serial: 'No. 007 / 010',
   kicker: 'Golden Ticket',
-  league: 'HUNGRY HOMIES',
+  league: 'HOWIES FINEST',
   year: '2026',
   sub: 'FANTASY FOOTBALL LEAGUE',
   body: 'This ticket entitles the bearer to one (1) attempt at membership.',
@@ -149,7 +149,7 @@ export const DOOR = {
 // ---------- FINALE ----------
 export const FINALE = {
   welcome: 'WELCOME TO THE LEAGUE',
-  league: 'HUNGRY HOMIES',
+  league: 'HOWIES FINEST',
   year: '2026',
   cta: 'ACCEPT LEAGUE INVITATION',
   noUrl: 'The Commissioner has not pasted the league link yet.\nScreenshot this and harass him directly.',

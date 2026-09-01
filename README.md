@@ -1,7 +1,7 @@
-# The Hungry Homies — Initiation
+# Howies Finest — Initiation
 
 A gold-foil Hungry Howie's golden ticket that makes the recipient work through
-five hands-on trials before the fantasy football league invite is revealed.
+five hands-on trials before the Howies Finest league invite is revealed.
 Mobile-first, ~5 minutes. Every trial is a physical interaction, not a puzzle.
 
 | # | Trial | What you do | The turn |

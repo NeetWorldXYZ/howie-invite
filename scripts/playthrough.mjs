@@ -96,6 +96,15 @@ try {
 
   await btn('BEGIN INITIATION').click();
 
+  // the league link must not be exposed anywhere in the UI until the end
+  const leakedEarly = await page.evaluate(() => {
+    const inDom = document.body.innerHTML.includes('fantasy.espn.com');
+    const links = [...document.querySelectorAll('a')].map((a) => a.href).join(' ');
+    return inDom || links.includes('espn');
+  });
+  if (leakedEarly) throw new Error('the ESPN league link is visible before the game is finished');
+  ok('the league link is not in the page before completion');
+
   // ---------- TRIAL 1: SLOT ----------
   await page.getByText('THE MACHINE').waitFor();
   const pullLever = async () => {
@@ -191,7 +200,8 @@ try {
   ok(`trial 3: the dart flies (sampled ${dartPath.length} positions in flight)`);
   await page.locator('.balloon-wall.receded').waitFor();
   ok('trial 3: balloons recede into the background');
-  await page.locator('.prize-paper').click();
+  // it drifts by design, so Playwright's stability check never settles
+  await page.locator('.prize-paper').click({ force: true });
   await page.getByText("HOWIE'S BOOK OF RECORDS").waitFor();
   await page.getByText('KORY & JASON').waitFor();
   await page.locator('.rn-title', { hasText: 'DOUGH CHAMPS' }).waitFor();
@@ -309,10 +319,16 @@ try {
 
   // ---------- FINALE ----------
   await page.getByText('WELCOME TO THE LEAGUE').waitFor({ timeout: 10000 });
-  await page.getByText('HUNGRY HOMIES').waitFor();
+  await page.getByText('HOWIES FINEST').waitFor();
   if (await page.locator('.confetti .cf').count() < 40) throw new Error('no confetti');
   if (await page.locator('.finale-card .hh-logo').count() !== 1) throw new Error('logo missing from finale');
-  await page.getByText('ACCEPT LEAGUE INVITATION').waitFor();
+  const invite = page.getByRole('link', { name: 'ACCEPT LEAGUE INVITATION' });
+  await invite.waitFor();
+  const href = await invite.getAttribute('href');
+  if (!/fantasy\.espn\.com.*leagueId=184982086/.test(href || '')) {
+    throw new Error('invite button does not point at the ESPN league: ' + href);
+  }
+  ok('finale: the invite button links to the real ESPN league');
   ok('finale: confetti, logo, welcome and the invite button');
 
   await page.reload();
