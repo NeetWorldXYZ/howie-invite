@@ -97,6 +97,7 @@ input, textarea, select { font-family: inherit; }
    HUD
    ============================================================ */
 .hud {
+  position: relative; z-index: 90;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -117,6 +118,13 @@ input, textarea, select { font-family: inherit; }
   padding: 7px 10px;
 }
 .hud-btn:active { background: rgba(255,255,255,0.09); }
+/* over the finale artwork the chrome sits on bright sky, not on black */
+.hud.on-light .hud-btn {
+  background: rgba(255,252,240,0.78);
+  border-color: rgba(90,74,26,0.28);
+  color: #5a4a1a;
+}
+.hud.on-light .hud-btn:active { background: rgba(255,252,240,0.95); }
 
 /* menu popover */
 .hud-menu {
@@ -1030,74 +1038,58 @@ input, textarea, select { font-family: inherit; }
 }
 /* Reaction shot: grainy, high-contrast, pushed in, caption burned on —
    built in-page rather than shipping a video clip. */
-.hdy { width: min(300px, 82vw); }
+.hdy { width: min(330px, 88vw); }
 .hdy-frame {
-  position: relative; width: 100%; aspect-ratio: 1.15;
+  position: relative; width: 100%;
   overflow: hidden; border-radius: 4px;
-  background: #0c0c0e;
+  background: #000;
   box-shadow: 0 20px 46px rgba(0,0,0,0.8);
+  line-height: 0;
 }
-.hdy-face {
-  position: absolute; left: 50%; top: 44%;
-  width: 116%; margin-left: -58%; transform: translateY(-50%) scale(1);
-  filter: grayscale(1) contrast(1.55) brightness(0.82);
-  animation: hdyPush 3.4s ease-in-out infinite alternate;
+.hdy-real {
+  width: 100%; height: auto; display: block;
+  filter: contrast(1.08);
 }
-@keyframes hdyPush {
-  from { transform: translateY(-50%) scale(1) translateX(0); }
-  to   { transform: translateY(-51%) scale(1.09) translateX(-3px); }
-}
-.hdy-grain {
-  position: absolute; inset: -20%;
-  background-image:
-    repeating-radial-gradient(circle at 17% 29%, rgba(255,255,255,0.09) 0 1px, transparent 1px 3px),
-    repeating-radial-gradient(circle at 71% 62%, rgba(0,0,0,0.16) 0 1px, transparent 1px 4px);
-  mix-blend-mode: overlay;
-  animation: hdyGrain 0.24s steps(3) infinite;
-  pointer-events: none;
-}
-@keyframes hdyGrain {
-  0% { transform: translate(0, 0); }
-  33% { transform: translate(-9px, 6px); }
-  66% { transform: translate(7px, -8px); }
-  100% { transform: translate(-4px, -3px); }
-}
-.hdy-bar { position: absolute; left: 0; right: 0; height: 9%; background: #000; }
+.hdy-bar { position: absolute; left: 0; right: 0; height: 5%; background: #000; }
 .hdy-bar.top { top: 0; }
 .hdy-bar.bottom { bottom: 0; }
-.hdy-caption {
-  position: absolute; left: 0; right: 0; bottom: 12%;
-  text-align: center;
-  font-family: var(--sans); font-weight: 800;
-  font-size: clamp(21px, 7.2vw, 30px); letter-spacing: 0.01em;
-  color: #fff;
-  text-shadow: 2px 2px 0 #000, -2px 2px 0 #000, 2px -2px 0 #000, -2px -2px 0 #000, 0 0 18px rgba(0,0,0,0.9);
-}
 /* ============================================================
    FINALE — the gates
    ============================================================ */
+/* Full bleed to the edges of the phone — the app's own padding and the
+   HUD row would otherwise letterbox the artwork in black. */
 .heaven {
-  position: relative; flex: 1;
-  margin: 0 -14px;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 6px;
-  min-height: 92vh; min-height: 92dvh;
-  padding: 30px 16px;
-  background: radial-gradient(circle at 50% 34%, #ffffff, #fdf7e6 42%, #f3e6c4 100%);
+  position: fixed; inset: 0; z-index: 10;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  background: #f6ecd6;
   text-align: center;
   animation: fadeIn 1.6s ease both;
-  overflow: hidden;
+  overflow-y: auto; overflow-x: hidden;
 }
-.heaven-light {
-  position: absolute; left: 50%; top: 26%;
-  width: 200%; aspect-ratio: 1; transform: translate(-50%, -50%);
-  background:
-    conic-gradient(from 0deg, rgba(255,224,150,0.4) 0 2deg, transparent 2deg 12deg,
-                   rgba(255,224,150,0.28) 12deg 14deg, transparent 14deg 26deg);
-  animation: rays 44s linear infinite;
+/* the artwork IS the scene — gates, clouds and god-rays are all in it */
+.heaven-frame { position: absolute; inset: 0; }
+.hj { position: absolute; inset: 0; margin: 0; }
+.hj-real {
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: 50% 12%;
+  display: block;
+  animation: hjIn 2.4s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}
+@keyframes hjIn {
+  from { opacity: 0; transform: scale(1.07); }
+  to { opacity: 1; transform: scale(1); }
+}
+/* cream rising out of the bottom of the picture so the copy is readable
+   without covering his face or his open arms */
+.heaven-scrim {
+  position: absolute; left: 0; right: 0; bottom: 0; top: 0;
   pointer-events: none;
+  background: linear-gradient(180deg,
+    transparent 0%, transparent 40%,
+    rgba(250,242,224,0.55) 56%,
+    rgba(250,242,224,0.92) 68%,
+    #f8f1df 78%);
 }
-@keyframes rays { to { transform: translate(-50%, -50%) rotate(360deg); } }
 .heaven-motes { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .heaven-motes span {
   position: absolute; left: var(--x); bottom: -8px;
@@ -1108,55 +1100,34 @@ input, textarea, select { font-family: inherit; }
   animation-delay: var(--d);
   opacity: 0;
 }
-
-/* Stand-in figure: rays, gates, halo, head. Deliberately simple —
-   swap in real artwork rather than building a body out of divs. */
-.hj { position: relative; margin: 0 0 4px; aspect-ratio: 0.714; }
-.hj-svg { width: 100%; height: 100%; display: block; }
-
-
-
-
-.hj-halo {
-  position: absolute; left: 50%; top: 8%;
-  width: 33%; height: 6.5%; margin-left: -16.5%;
-  border: 5px solid #f0c93f;
-  border-radius: 50%;
-  box-shadow: 0 0 30px rgba(240,201,63,0.95), inset 0 0 14px rgba(255,244,190,0.95);
-  animation: haloFloat 4.5s ease-in-out infinite;
+.heaven-copy {
+  position: relative; z-index: 5;
+  margin-top: auto;
+  padding: 0 18px calc(26px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; align-items: center;
 }
-@keyframes haloFloat { 50% { transform: translateY(-5px); } }
-.hj-head {
-  position: absolute; left: 50%; top: 11%;
-  width: 45%; margin-left: -22.5%;
-  filter: drop-shadow(0 8px 20px rgba(120,90,20,0.35));
-  z-index: 3;
-}
-.hj-real { width: 100%; height: auto; position: relative; z-index: 3; }
-
 .heaven-line {
-  font-family: var(--serif); font-size: 25px; line-height: 1.3;
-  color: #3d2f06; margin: 14px 0 0; position: relative; z-index: 5;
+  font-family: var(--serif); font-size: clamp(24px, 7vw, 29px); line-height: 1.28;
+  color: #3d2f06; margin: 0;
   text-wrap: balance;
-  animation: fadeIn 1.4s ease 0.6s both;
+  text-shadow: 0 1px 0 rgba(255,252,240,0.8);
+  animation: fadeIn 1.4s ease 0.9s both;
 }
 .heaven-rule {
-  width: 120px; height: 1px; margin: 16px auto;
+  width: 120px; height: 1px; margin: 15px auto;
   background: linear-gradient(90deg, transparent, #c9a227, transparent);
-  position: relative; z-index: 5;
 }
 .heaven-league {
-  font-family: var(--serif); font-weight: 600; font-size: 31px;
+  font-family: var(--serif); font-weight: 600; font-size: clamp(28px, 8.4vw, 33px);
   letter-spacing: 0.08em; color: #3d2f06;
-  position: relative; z-index: 5;
-  animation: fadeIn 1.2s ease 1s both;
+  animation: fadeIn 1.2s ease 1.3s both;
 }
 .heaven-year {
   font-family: var(--mono); font-size: 13px; letter-spacing: 0.44em; text-indent: 0.44em;
-  color: #8a6d14; position: relative; z-index: 5;
+  color: #8a6d14;
 }
-.heaven-cta { margin-top: 26px; position: relative; z-index: 5; animation: fadeIn 1s ease 1.5s both; }
-.heaven-note { margin-top: 12px; font-size: 12px; color: #6b5c3d; position: relative; z-index: 5; }
+.heaven-cta { margin-top: 22px; animation: fadeIn 1s ease 1.8s both; }
+.heaven-note { margin-top: 12px; font-size: 12px; color: #6b5c3d; }
 
 
 /* ============================================================
@@ -1714,3 +1685,15 @@ input, textarea, select { font-family: inherit; }
 .cc-btn.no:active { background: #4d1712; }
 .cc-btn:active { transform: translateY(1px); }
 .grovel-scene .btn.primary.block { max-width: 340px; }
+
+/* On anything wider than a phone, cover-cropping a tall portrait would
+   frame his chest and cut off his head. Keep the artwork in a centred
+   phone-width column instead, with the cream of the scene around it. */
+@media (min-width: 620px) {
+  .heaven-frame {
+    position: absolute; inset: 0;
+    width: min(560px, 100%); left: 50%; transform: translateX(-50%);
+    overflow: hidden;
+  }
+  .heaven-copy { width: min(560px, 100%); margin-left: auto; margin-right: auto; }
+}

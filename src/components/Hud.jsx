@@ -9,10 +9,11 @@ export default function Hud() {
   const [confirmReset, setConfirmReset] = useState(false);
 
   const inTrials = state.phase === 'trials';
+  const onLight = state.phase === 'finale'; // the finale artwork is bright
 
   return (
     <>
-      <div className={'hud' + (inTrials ? '' : ' bare')}>
+      <div className={'hud' + (inTrials ? '' : ' bare') + (onLight ? ' on-light' : '')}>
         <div className="hud-progress">
           {inTrials && <>INITIATION<br /><b>{state.trial} / {TRIALS.length}</b></>}
         </div>

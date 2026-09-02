@@ -326,9 +326,14 @@ try {
   // the lazy-bones branch first
   await btn('NO, SORRY, I AM A LAZY BONES').click();
   await page.locator('.getout-scene').waitFor();
-  await page.getByText('GET OUT.').waitFor();
   if (await page.locator('.hdy-frame').count() !== 1) throw new Error('no reaction shot');
-  ok('trial 5: saying no gets you the GET OUT reaction shot');
+  // the real clip, actually decoded and actually animated
+  const clip = await page.locator('.hdy-real').evaluate((el) => ({
+    w: el.naturalWidth, h: el.naturalHeight, gif: /\.gif$|image\/gif/.test(el.currentSrc || el.src),
+  }));
+  if (!clip.w) throw new Error('the Get Out clip did not load');
+  if (!clip.gif) throw new Error('the reaction shot is not a gif — it will not animate');
+  ok(`trial 5: saying no plays the real Get Out clip (${clip.w}x${clip.h} gif)`);
   await btn('CALL HIM BACK. BEG.').click();
   await page.getByText('CALLING JESSE…').waitFor();
   // grovel is tap-to-advance now — big lines, one at a time; only the
@@ -349,6 +354,15 @@ try {
   await page.getByText('Welcome to the league, my friend.').waitFor();
   await page.getByText('HOWIES FINEST').waitFor();
   if (await page.locator('.hj').count() !== 1) throw new Error('Howie is not at the gates');
+  const art = await page.locator('.hj-real').evaluate((el) => ({ w: el.naturalWidth, h: el.naturalHeight }));
+  if (!art.w) throw new Error('the Howie-at-the-gates artwork did not load');
+  ok(`finale: the real artwork loads (${art.w}x${art.h})`);
+  // it must fill the screen rather than sit in a box
+  const cover = await page.locator('.hj-real').evaluate(
+    (el) => el.getBoundingClientRect().width / window.innerWidth,
+  );
+  if (cover < 0.98) throw new Error(`artwork is not full bleed (${cover.toFixed(2)} of the width)`);
+  ok('finale: the artwork is full bleed');
   const invite = page.getByRole('link', { name: 'ACCEPT LEAGUE INVITATION' });
   await invite.waitFor();
   const href = await invite.getAttribute('href');
