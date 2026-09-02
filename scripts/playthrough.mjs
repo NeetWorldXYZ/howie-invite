@@ -313,7 +313,7 @@ try {
 
   // the call plays one big line at a time, tap to advance
   await page.locator('.call-scene').waitFor({ timeout: 6000 });
-  await page.getByText('Do NOT hang up', { exact: false }).waitFor({ timeout: 6000 });
+  await page.getByText('I know you just got home', { exact: false }).waitFor({ timeout: 6000 });
   ok('trial 5: the call opens on one big line');
   for (let i = 0; i < 8; i++) {
     if (await page.locator('.call-choice').count()) break;
@@ -340,7 +340,7 @@ try {
   // current line is on screen, so watch for the begging as it goes by
   let begged = false;
   for (let i = 0; i < 12; i++) {
-    if (await page.getByText('FORGIVE ME', { exact: false }).count()) begged = true;
+    if (await page.getByText('so sorry', { exact: false }).count()) begged = true;
     if (await btn('DRIVE BACK LIKE YOU MEAN IT').count()) break;
     await page.locator('.grovel-scene').click({ position: { x: 40, y: 300 } });
     await page.waitForTimeout(250);
