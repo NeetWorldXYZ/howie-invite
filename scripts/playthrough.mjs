@@ -376,20 +376,24 @@ try {
   await page.locator('.heaven').waitFor({ timeout: 10000 });
   ok('finale survives refresh');
 
-  // The finale must not be a dead end — you have to be able to play again.
-  await page.getByRole('button', { name: 'RUN IT AGAIN', exact: true }).click();
+  // Nothing on the finale wipes a finished run by accident — the invite
+  // button is the last thing on it.
+  if (await page.getByRole('button', { name: /RUN IT AGAIN/i }).count()) {
+    throw new Error('the finale still offers a one-tap restart next to the invite');
+  }
+  ok('finale: no one-tap restart sitting under the invite button');
+
+  // ...but the finale must still not be a dead end. The reset lives in the
+  // HUD menu, behind a confirm, and has to work on top of the artwork.
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('button', { name: /Start over from the envelope/ }).click();
+  await page.getByRole('button', { name: /Yes, wipe my progress/ }).click();
   await page.getByText('You have been chosen.').waitFor({ timeout: 8000 });
   await page.locator('.wax-seal').waitFor({ timeout: 4000 });
-  ok('RUN IT AGAIN on the finale restarts from the sealed envelope');
+  ok('finale: the HUD reset still returns to the sealed envelope');
   await page.reload();
   await page.getByText('You have been chosen.').waitFor({ timeout: 8000 });
   ok('the restart persists through a refresh (save really was cleared)');
-
-  // and the same is reachable from the HUD menu at any point
-  await page.getByRole('button', { name: 'Menu' }).click();
-  await page.getByRole('button', { name: /Start over/ }).waitFor();
-  ok('HUD reset is reachable outside the trials too');
-  await page.keyboard.press('Escape').catch(() => {});
 
   const p2 = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
   await p2.goto(BASE);

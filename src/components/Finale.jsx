@@ -7,7 +7,7 @@ import { sfx } from '../sound.js';
 import { HowieJesus } from './art.jsx';
 
 export default function Finale() {
-  const { state, reset } = useGame();
+  const { state } = useGame();
   const submitted = useRef(false);
 
   useEffect(() => { sfx.heaven(); }, []);
@@ -55,11 +55,6 @@ export default function Finale() {
             <div className="heaven-note" style={{ whiteSpace: 'pre-line' }}>{FINALE.noUrl}</div>
           </div>
         )}
-
-        {/* the finale must never be a dead end */}
-        <button className="run-again heaven-again" onClick={() => { sfx.tap(); reset(); }}>
-          RUN IT AGAIN
-        </button>
       </div>
     </div>
   );

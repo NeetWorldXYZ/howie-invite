@@ -1160,25 +1160,10 @@ input, textarea, select { font-family: inherit; }
 
 @media (min-width: 480px) { body { font-size: 16px; } }
 
-/* Reset affordance — the finale must not be a dead end. */
+/* The finale ends on the invite button. Starting over lives behind the
+   HUD menu and its confirm, so nobody wipes a finished run by accident. */
 .hud.bare { min-height: 44px; }
-.run-again {
-  position: relative; z-index: 82;
-  margin-top: 4px;
-  background: none; border: none;
-  color: rgba(239,230,208,0.45);
-  font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em;
-  text-decoration: underline dotted; text-underline-offset: 4px;
-  padding: 10px 14px;
-}
-.run-again:active { color: var(--gold-bright); }
 
-.heaven-again {
-  position: relative; z-index: 5;
-  margin-top: 10px;
-  color: rgba(90,74,26,0.6);
-}
-.heaven-again:active { color: #8a6d14; }
 
 /* ============================================================
    CIRCUS CURTAIN — opens onto the dart booth
